@@ -349,19 +349,13 @@ consputc(int c)
 	}
 
 	if(c == BACKSPACE){
-		//#if defined (RPI1)
 		gpuputc('\b'); gpuputc(' '); gpuputc('\b');
-		//#endif
 		uartputc('\b'); uartputc(' '); uartputc('\b');
 	} else if(c == C('D')) {
-		//#if defined (RPI1)
 		gpuputc('^'); gpuputc('D');
-		//#endif
 		uartputc('^'); uartputc('D');
 	} else {
-		//#if defined (RPI1)
 		gpuputc(c);
-		//#endif
 		uartputc(c);
 	}
 }
@@ -373,7 +367,7 @@ consoleintr(int (*getc)(void))
 	int c;
 
 	acquire(&input.lock);
-	while((c = getc()) >= 0){
+	while((c = getc()) > 0){
 		switch(c){
 		case C('P'):  // Process listing.
     		  procdump();
@@ -393,8 +387,8 @@ consoleintr(int (*getc)(void))
 			break;
 		default:
 			if(c != 0 && input.e-input.r < INPUT_BUF){
-				if(c == 0xa) break;
-				c = (c == 0xd) ? '\n' : c;
+				if(c == 0xd) break;
+				c = (c == 0xa) ? '\n' : c;
 				input.buf[input.e++ % INPUT_BUF] = c;
 				consputc(c);
 				if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){

@@ -25,10 +25,12 @@
 #define COMPARE2                0x14 // compare 2
 #define COMPARE3                0x18 // compare 3
 
-#define TIMER_FREQ		10000  // interrupt 100 times/sec.
+#define TIMER_FREQ		50000  // interrupt 20 times/sec.
 
-void 
-enabletimer3irq(void)
+void led_on();
+void led_off();
+
+void enabletimer3irq(void)
 {
         intctrlregs *ip;
 
@@ -75,7 +77,21 @@ delay(uint m)
 	if(m == 0) return;
 
 	t = getsystemtime() + m;
+	//led_on();
 	while(t != getsystemtime());
+	//led_off();
 
 	return;
+}
+
+void led_on()
+{
+	setgpiofunc(18, 1); // gpio 18 for Ok Led, set as an output
+        setgpioval(18, 1);
+}
+
+void led_off()
+{
+	setgpiofunc(18, 1); // gpio 18 for Ok Led, set as an output
+	setgpioval(18, 0);
 }

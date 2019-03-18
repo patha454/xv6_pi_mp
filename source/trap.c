@@ -16,6 +16,9 @@
 #include "traps.h"
 #include "spinlock.h"
 
+#include <uspi.h>
+#include <uspios.h>
+
 extern u8 *vectors;
 
 void cprintf(char*, ...);
@@ -27,9 +30,33 @@ void set_mode_sp(char *, uint);
 struct spinlock tickslock;
 uint ticks;
 
+TInterruptHandler *pUSBHandler;
+void *pUSBParam;
+unsigned nUSBIRQ;
+
+TInterruptHandler *pUSBTimerHandler;
+void *pUSBTimerParam;
+unsigned nUSBTimerIRQ;
+
+void led18_on(void);
+void led18_off(void);
+
+void led25_on()
+{
+   setgpiofunc(25, 1); // gpio 18 for Ok Led, set as an output
+   setgpioval(25, 1);
+}
+
+void led25_off()
+{
+   setgpiofunc(25, 1); // gpio 18 for Ok Led, set as an output
+   setgpioval(25, 0);
+}
+
+
 void enable_intrs(void)
 {
-        intctrlregs *ip;
+        volatile intctrlregs *ip;
 
         ip = (intctrlregs *)INT_REGS_BASE;
         ip->gpuenable[0] |= 1 << 29;   // enable the miniuart through Aux
@@ -40,7 +67,7 @@ void enable_intrs(void)
 
 void disable_intrs(void)
 {
-        intctrlregs *ip;
+        volatile intctrlregs *ip;
         int disable;
 
         ip = (intctrlregs *)INT_REGS_BASE;
@@ -103,7 +130,7 @@ cprintf("More registers: r6: %x, r7: %x, r8: %x, r9: %x, r10: %x, r11: %x, r12: 
 
 void handle_irq(struct trapframe *tf)
 {
-	intctrlregs *ip;
+	volatile intctrlregs *ip;
 
 /*cprintf("trapno: %x, spsr: %x, sp: %x, lr: %x cpsr: %x ifar: %x\n", tf->trapno, tf->spsr, tf->sp, tf->pc, tf->cpsr, tf->ifar);
 cprintf("Saved registers: r0: %x, r1: %x, r2: %x, r3: %x, r4: %x, r5: %x, r6: %x\n", tf->r0, tf->r1, tf->r2, tf->r3, tf->r4, tf->r5, tf->r6);
@@ -122,12 +149,17 @@ cprintf("More registers: r6: %x, r7: %x, r8: %x, r9: %x, r10: %x, r11: %x, r12: 
 }
 
 
+extern int uart_disabled;
+
+
 //PAGEBREAK: 41
 void
 trap(struct trapframe *tf)
 {
-	intctrlregs *ip;
-	uint istimer;
+
+    volatile intctrlregs *ip = (intctrlregs *)INT_REGS_BASE;
+    uint istimer;
+    volatile int *udp = &uart_disabled;
 
 //cprintf("Trap %d from cpu %d eip %x (cr2=0x%x)\n",
 //              tf->trapno, curr_cpu->id, tf->eip, 0);
@@ -145,18 +177,28 @@ trap(struct trapframe *tf)
   istimer = 0;
   switch(tf->trapno){
   case T_IRQ:
-	ip = (intctrlregs *)INT_REGS_BASE;
-	while(ip->gpupending[0] || ip->gpupending[1] || ip->armpending){
-	    if(ip->gpupending[0] & (1 << IRQ_TIMER3)) {
-		istimer = 1;
-		timer3intr();
-	    }
-	    if(ip->gpupending[0] & (1 << IRQ_MINIUART)) {
-		miniuartintr();
-	    }
+	//ip = (intctrlregs *)INT_REGS_BASE;
+    while(ip->gpupending[0] || ip->gpupending[1] || ip->armpending) {
+        if(ip->gpupending[0] & (1 << IRQ_TIMER3)) {
+            istimer = 1;
+            //cprintf("trap: TIMER3INT!\n");
+            timer3intr();
+        }
+        if(ip->gpupending[0] & (1 << nUSBTimerIRQ)) {
+            pUSBTimerHandler(pUSBTimerParam);
+        }
+        if(ip->gpupending[0] & (1 << nUSBIRQ)) {
+            pUSBHandler(pUSBParam);
+        }
+        if(ip->gpupending[0] & (1 << IRQ_MINIUART)) {
+led25_on();
+            if(!(*udp)) miniuartintr();
+led25_off();
+        }
+
 	}
 
-	break;
+    break;
   default:
     if(curr_proc == 0 || (tf->spsr & 0xF) != USER_MODE){
       // In kernel, it must be our mistake.
@@ -195,3 +237,29 @@ trap(struct trapframe *tf)
 
 }
 
+// USPi uses USB IRQ 9
+void ConnectInterrupt (unsigned nIRQ, TInterruptHandler *pHandler, void *pParam) {
+	//cprintf("trap: Entering ConnectInterrupt, IRQ %d\n", nIRQ);
+	nUSBIRQ = nIRQ;
+	pUSBHandler = pHandler;
+	pUSBParam = pParam;
+	// enable the IRQ for USB
+	//intctrlregs *ip = (intctrlregs *)INT_REGS_BASE;
+	//ip->gpuenable[0] |= 1 << nUSBIRQ;
+	*(volatile u32 *) ARM_IC_IRQS_ENABLE (nUSBIRQ) = ARM_IRQ_MASK (nUSBIRQ);
+	//sti();
+	cprintf("trap: USB interrupt %d enabled\n", nUSBIRQ);
+}
+
+// USPi USB Timer1
+void ConnectTimerInterrupt (unsigned nIRQ, TInterruptHandler *pHandler, void *pParam) {
+	//cprintf("trap: Entering ConnectTimerInterrupt, IRQ %d\n", nIRQ);
+	nUSBTimerIRQ = nIRQ;
+	pUSBTimerHandler = pHandler;
+	pUSBTimerParam = pParam;
+	// enable the IRQ for the USB timer
+	//intctrlregs *ip = (intctrlregs *)INT_REGS_BASE;
+	//ip->gpuenable[0] |= 1 << nUSBTimerIRQ;
+	*(volatile u32 *) ARM_IC_IRQS_ENABLE (nUSBTimerIRQ) = ARM_IRQ_MASK (nUSBTimerIRQ);
+	cprintf("trap: USB timer interrupt %d enabled\n", nUSBTimerIRQ);
+}

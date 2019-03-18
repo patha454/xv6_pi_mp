@@ -15,6 +15,9 @@
 #include "arm.h"
 #include "mailbox.h"
 
+#include <uspi.h>
+#include <uspios.h>
+
 extern char end[]; // first address after kernel loaded from ELF file
 extern pde_t *kpgdir;
 extern volatile uint *mailbuffer;
@@ -59,54 +62,62 @@ void machinit(void)
 
 void enableirqminiuart(void);
 
+
 uint mb_data[10];
 
 int cmain()
 {
-  mmuinit0();
-  machinit();
 
-  #if defined (RPI1) || defined (RPI2)
-  uartinit();
-  #elif defined (FVP)
-  uartinit_fvp();
-  #endif
+    mmuinit0();
+    machinit();
 
-  dsb_barrier();
+    #if defined (RPI1) || defined (RPI2)
+    uartinit();
+    #elif defined (FVP)
+    uartinit_fvp();
+    #endif
 
-  consoleinit();
-  cprintf("\nHello World from xv6\n");
+    dsb_barrier();
+    consoleinit();
+    cprintf("\nHello World from xv6\n");
 
-  kinit1(end, P2V((8*1024*1024)+PHYSTART)); 
-  // collect some free space (8 MB) for imminent use
-  // the physical space below 0x8000 is reserved for PGDIR and kernel stack
-  kpgdir=p2v(K_PDX_BASE);
+    kinit1(end, P2V((8*1024*1024)+PHYSTART));
+    // collect some free space (8 MB) for imminent use
+    // the physical space below 0x8000 is reserved for PGDIR and kernel stack
+    kpgdir=p2v(K_PDX_BASE);
 
-  mailboxinit();
+    mailboxinit();
 
-  pm_size = getpmsize();
-  cprintf("ARM memory is %x\n", pm_size);
-  
-  mmuinit1();
-  gpuinit();
-  pinit();
-  tvinit();
-  cprintf("it is ok after tvinit\n");
-  binit();
-cprintf("it is ok after binit\n");
-  fileinit();
-cprintf("it is ok after fileinit\n");
-  iinit();
-cprintf("it is ok after iinit\n");
-  ideinit();
-cprintf("it is ok after ideinit\n");
-  kinit2(P2V((8*1024*1024)+PHYSTART), P2V(pm_size));
-cprintf("it is ok after kinit2\n");
-  userinit();
-cprintf("it is ok after userinit\n");
-  timer3init();
-cprintf("it is ok after timer3init\n");
-  scheduler();
-  NotOkLoop();
-  return 0;
+    pm_size = getpmsize();
+    cprintf("ARM memory: %x\n", pm_size);
+
+    mmuinit1();
+    cprintf("mmuinit1: OK\n");
+    gpuinit();
+    cprintf("gpuinit: OK\n");
+    pinit();
+    cprintf("pinit: OK\n");
+    tvinit();
+    cprintf("tvinit: OK\n");
+    binit();
+    cprintf("binit: OK\n");
+    fileinit();
+    cprintf("fileinit: OK\n");
+    iinit();
+    cprintf("iinit: OK\n");
+    ideinit();
+    cprintf("ideinit: OK\n");
+    kinit2(P2V((8*1024*1024)+PHYSTART), P2V(pm_size));
+    cprintf("kinit2: OK\n");
+    usbinit();
+    userinit();
+    cprintf("userinit: OK\n");
+    timer3init();
+    cprintf("timer3init: OK\n");
+    enableirqminiuart();
+    cprintf("Handing off to scheduler...\n");
+
+    scheduler();
+    NotOkLoop();
+    return 0;
 }

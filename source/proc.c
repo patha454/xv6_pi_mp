@@ -16,6 +16,8 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#include <uspios.h>
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -275,7 +277,6 @@ scheduler(void)
 
   for(;;){
     // Enable interrupts on this processor.
-    //cprintf("before enabling interrupts\n");
     if(first_sched) first_sched = 0;
     else sti();
 

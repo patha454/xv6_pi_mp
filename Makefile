@@ -3,7 +3,7 @@ UNAME := $(shell uname -m)
 ifeq ($(UNAME), x86_64)
 	# set FVP as default on x86_64 systems	
 	hw?=rpi2
-	TOOLCHAIN?=~/gcc-arm-none-eabi-5_4-2016q3/bin/arm-none-eabi-
+	TOOLCHAIN?=arm-none-eabi-
 else
 	# RPI reports 'uname -m' as: armv7l
 	hw?=rpi2
@@ -51,9 +51,10 @@ else ifeq ($(hw), rpi2)
 	MMIO_VA   = 0xD0000000
 	MMIO_SIZE = 0x01000000
 	PERIPHBASE= 0xDF000000
-	CFLAGS    = -ffreestanding -nostdlib -nostartfiles -O2 -Wall -MD -ggdb -Wall -mcpu=cortex-a7 -mfloat-abi=hard -fno-short-enums -I include 
+	CFLAGS    = -ffreestanding -nostdlib -nostartfiles -O2 -Wall -MD -std=gnu99 -ggdb -Wall -mcpu=cortex-a7 -mfloat-abi=hard -fno-short-enums -fno-zero-initialized-in-bss -I include
+	#CFLAGS    = -ffreestanding -nostdlib -nostartfiles -O2 -Wall -MD -ggdb -Wall -mcpu=cortex-a7 -mfloat-abi=hard -fno-short-enums -I include 
 	TARGET    = kernel7.bin
-	CC_OPTIONS = -DRPI2
+	CC_OPTIONS = -DRPI2 -DRASPPI=2 -DNDEBUG
 else
 $(error Hardware (hw) should be fvp, rpi1 or rpi2, eg. make hw=rpi2)
 endif
