@@ -220,6 +220,9 @@ swtch:
 	pop {r11}
 	pop {r12}
 
+	/* Clear local exclusive access record. */
+	clrex
+	
 	/* return to previously saved pc */
 	pop {lr}
 	pop {pc}

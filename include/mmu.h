@@ -26,7 +26,8 @@
 #define BUFFERED	0x00000004
 #define CACHED		0x00000008
 #define APX		1 << 9
-#define SHAREABLE       1 << 10
+#define L1_SHAREABLE    1 << 16
+#define L2_SHAREABLE    1 << 10
 #define nG		1 << 11  // non-global
 #define XN		0x1      // execute never
 #define DOMAIN0		0

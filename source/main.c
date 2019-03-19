@@ -90,10 +90,10 @@ int cmain()
 
     pm_size = getpmsize();
     cprintf("ARM memory: %x\n", pm_size);
-
     mmuinit1();
     cprintf("mmuinit1: OK\n");
     gpuinit();
+    cprintf("ARM xv6 MP USB\n");
     cprintf("gpuinit: OK\n");
     pinit();
     cprintf("pinit: OK\n");

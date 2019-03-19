@@ -42,7 +42,7 @@ void mmuinit0(void)
 	// map all of ram at KERNBASE
 	va = KERNBASE + MBYTE;
 	for(pa = PHYSTART + MBYTE; pa < PHYSTART+PHYSIZE; pa += MBYTE){
-		l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED;
+		l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED|L1_SHAREABLE;
 		va += MBYTE;
 	}
 
