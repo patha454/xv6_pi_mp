@@ -176,8 +176,22 @@ mp_continue:
 	// Enable I/D$, MMU, and flow prediction.
 	dsb
 	ldr r1,=_pagingstart
+
+	//Clear ICache and Dcache.
+	#ifdef RPI1
+	mov r0, #0
+	mcr p15, 0, r0, c7, c10, 4 /* dsb */
+	mov r0, #0
+	mcr p15, 0, r0, c7, c14, 0 /* invalidate d-cache */
+	mov r0, #0
+	mcr p15, 0, r0, c7, c5, 0 /* invalidate i-cache */
+	#else
+	dsb
+	isb
+	#endif
+	
 	mrc	p15, 0, r0, c1, c0, 0
-	orr r0, r0,	#(0x1 << 13)		// High vector
+	orr r0, r0,	#(0x1 << 13)	// High vector
 	//orr	r0, r0, #(0x1 << 12)	// Enable I$
 	//orr	r0, r0, #(0x1 << 11)	// Enable flow prediction
 	//orr	r0, r0, #(0x1 <<  2)	// Enable D$
