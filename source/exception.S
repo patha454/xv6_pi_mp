@@ -227,3 +227,24 @@ swtch:
 	pop {lr}
 	pop {pc}
 
+/** extern void spin_acquire(void* lock) */
+.global spin_acquire
+spin_acquire:	
+	mov r1, #1		// Saved locked value in R1.
+spinloop:
+	ldrex r2, [r0]		// Load the lock.
+	cmp r2, r1		// Test is the lock is locked.
+	beq spinloop		// If locked, wait until unlocked.
+	strexne r2, r1, [r0]	// Attempt to set the lock.
+	cmpne r2, #1		// Test if the store exclusive failed.
+	beq spinloop		// If failed to lock, retry.
+				// Lock acquired.
+	dmb			// Required before accessing protected resource.
+	bx lr			// Return.
+
+.global spin_release
+spin_release:
+	mov r1, #0		// Saved unlocked value in R1.
+	dmb			// Required before releasing protected resource.
+	str r1, [r0]		// Unlock mutex.
+	bx lr			// Return

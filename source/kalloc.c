@@ -46,8 +46,10 @@ freerange(void *vstart, void *vend)
 {
   char *p;
   p = (char*)PGROUNDUP((uint)vstart);
+  // OkLoop never runs after this loop.
   for(; p + PGSIZE <= (char*)vend; p += PGSIZE)
     kfree(p);
+  //OkLoop();
 }
 
 //PAGEBREAK: 21
@@ -59,9 +61,9 @@ void
 kfree(char *v)
 {
   struct run *r;
-  if((uint)v % PGSIZE || v < end || v2p(v) >= pm_size)
+  if((uint)v % PGSIZE || v < end || v2p(v) >= pm_size) {
     panic("kfree");
-
+  }
   // Fill with junk to catch dangling refs.
   //memset(v, 1, PGSIZE); //commented out to speed up
 

@@ -34,7 +34,7 @@ boot_reset:
 	bic	r0, r0, #(0x1 << 12)	// Disable instruction cache
 	bic	r0, r0, #(0x1 << 11)	// Disable flow prediction
 	bic	r0, r0, #(0x1 <<  2)	// Disable data cache
-	bic	r0, r0, #0x1			// Disable MMU
+	bic	r0, r0, #0x1		// Disable MMU
 	mcr	p15, 0, r0, c1, c0, 0
 
 	// Enable ACTLR.SMP bit
@@ -143,7 +143,7 @@ pagetable_invalidate:
 	// 0x15c06= 0b0010 101 11 0 0000 0 01 10
 	//            ZGSA-TEX-AP-I-DOMN-X-CB-10
 
-	//ldr	r2,=0x14c06		//Inner cache
+	//ldr	r2,=0x14c06	//Inner cache
 	//ldr	r2,=0x15c06 	//Outer cache
 	ldr	r2,=0x14406
 
@@ -177,24 +177,40 @@ mp_continue:
 	dsb
 	ldr r1,=_pagingstart
 
-	//Clear ICache and Dcache.
-	#ifdef RPI1
-	mov r0, #0
-	mcr p15, 0, r0, c7, c10, 4 /* dsb */
-	mov r0, #0
-	mcr p15, 0, r0, c7, c14, 0 /* invalidate d-cache */
-	mov r0, #0
-	mcr p15, 0, r0, c7, c5, 0 /* invalidate i-cache */
-	#else
-	dsb
-	isb
-	#endif
+	 //Clear ICache and Dcache.
+	 #ifdef RPI1
+	 mov r0, #0
+	 mcr p15, 0, r0, c7, c10, 4 /* dsb */
+	 mov r0, #0
+	 mcr p15, 0, r0, c7, c14, 0 /* invalidate d-cache */
+	 mov r0, #0
+	 mcr p15, 0, r0, c7, c5, 0 /* invalidate i-cache */
+	 #else
+	 dsb
+	 isb
+	 #endif
+	// The I cache and D cache should be invalidated before enabeling cacheing.
 	
 	mrc	p15, 0, r0, c1, c0, 0
 	orr r0, r0,	#(0x1 << 13)	// High vector
 	//orr	r0, r0, #(0x1 << 12)	// Enable I$
 	//orr	r0, r0, #(0x1 << 11)	// Enable flow prediction
 	//orr	r0, r0, #(0x1 <<  2)	// Enable D$
+	/* Enable depricated SWP atomic operation.
+	 * RPI2 (Cortex A7/ARMv7 encourages the use of the new LDREX and STREX
+	 * synchronisation primitives, but these require the both the I cache and
+	 * D cache enabled - which is more complex than just enabling the other
+	 * bits above.
+	 *
+	 * For now, we'll do it this way.
+	 *
+	 * Not that the RPI3 and later RPI2B use the Cortex A53 (ARM v8) which does
+	 * not support the SWP instruction - we'd have to use LDREX/STREX...
+	 * But the ARMv8 registers to enable and invalidate cache are diffrent to
+	 * the ARMv7, so we'd encounter compatilitity issues either way.
+	 * For now, we'll support the RPI2.
+	 */
+	orr     r0, r0, #(0x1 << 10)    // Enable depricated SWP atomic instruction.
 	orr	r0, r0, #0x1				// Enable MMU
 	mcr	p15, 0, r0, c1, c0, 0
 	bx r1
@@ -202,6 +218,7 @@ mp_continue:
 	.section .text
 .global _pagingstart
 _pagingstart:
+        //bl OkLook
 	bl cmain  /* call C functions now */
 	bl NotOkLoop
 

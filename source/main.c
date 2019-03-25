@@ -23,25 +23,34 @@ extern pde_t *kpgdir;
 extern volatile uint *mailbuffer;
 extern unsigned int pm_size;
 
+void basic_delay(uint n) {
+  uint sum;
+  volatile uint i;
+  for (i = 0; i < n; i++) {
+    sum += i;
+  }
+}
+
 void OkLoop()
 {
-   setgpiofunc(18, 1); // gpio 18 for Ok Led, set as an output
+   setgpiofunc(12, 1); // gpio 18 for Ok Led, set as an output
+   setgpioval(12, 1);
    while(1){
-        setgpioval(18, 0);
-        delay(2000000);
-        setgpioval(18, 1);
-        delay(2000000);
+        setgpioval(12, 1);
+        basic_delay(2000000);
+        setgpioval(12, 0);
+        basic_delay(2000000);
    }
 }
 
 void NotOkLoop()
 {
-   setgpiofunc(18, 1); // gpio 18 for Ok Led, set as an output
+   setgpiofunc(12, 1); // gpio 18 for Ok Led, set as an output
    while(1){
-        setgpioval(18, 0);
-        delay(500000);
-        setgpioval(18, 1);
-        delay(500000);
+        setgpioval(12, 1);
+        basic_delay(500000);
+        setgpioval(12, 0);
+        basic_delay(500000);
    }
 }
 
@@ -67,34 +76,35 @@ uint mb_data[10];
 
 int cmain()
 {
-
     mmuinit0();
+    
     machinit();
-
     #if defined (RPI1) || defined (RPI2)
     uartinit();
     #elif defined (FVP)
     uartinit_fvp();
     #endif
-
     dsb_barrier();
+    //OkLoop works until kinit.
     consoleinit();
     cprintf("\nHello World from xv6\n");
-
+    
     kinit1(end, P2V((8*1024*1024)+PHYSTART));
+    //OkLoop();
+    mailboxinit();
+    gpuinit(); 
     // collect some free space (8 MB) for imminent use
     // the physical space below 0x8000 is reserved for PGDIR and kernel stack
     kpgdir=p2v(K_PDX_BASE);
 
-    mailboxinit();
-
+    //mailboxinit();
     pm_size = getpmsize();
     cprintf("ARM memory: %x\n", pm_size);
     mmuinit1();
     cprintf("mmuinit1: OK\n");
-    gpuinit();
+    //gpuinit();
     cprintf("ARM xv6 MP USB\n");
-    cprintf("gpuinit: OK\n");
+    //cprintf("gpuinit: OK\n");
     pinit();
     cprintf("pinit: OK\n");
     tvinit();
