@@ -54,6 +54,7 @@ void NotOkLoop()
    }
 }
 
+
 unsigned int getpmsize()
 {
     create_request(mailbuffer, MPI_TAG_GET_ARM_MEMORY, 8, 0, 0);
@@ -88,7 +89,6 @@ int cmain()
     //OkLoop works until kinit.
     consoleinit();
     cprintf("\nHello World from xv6\n");
-    
     kinit1(end, P2V((8*1024*1024)+PHYSTART));
     //OkLoop();
     mailboxinit();

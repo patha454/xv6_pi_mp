@@ -39,12 +39,13 @@ void mmuinit0(void)
 	l1 = (pde_t *) K_PDX_BASE;
 	l2 = (pte_t *) K_PTX_BASE;
 
+	//Not required in AMRv8 - use assembly in entry.S
 	// map all of ram at KERNBASE
-	va = KERNBASE + MBYTE;
+	/*va = KERNBASE + MBYTE;
 	for(pa = PHYSTART + MBYTE; pa < PHYSTART+PHYSIZE; pa += MBYTE){
 	  l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED|L1_SHAREABLE;
 		va += MBYTE;
-	}
+	}*/
 
 	// identity map first MB of ram so mmu can be enabled
 	//l1[PDX(PHYSTART)] = PHYSTART|DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED;
@@ -99,6 +100,9 @@ mmuinit1(void)
         va = KERNBASE + PHYSIZE;
         for(pa = PHYSTART + PHYSIZE; pa < PHYSTART+pm_size; pa += MBYTE){
                 l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED;
+
+                //l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION;
+
                 va += MBYTE;
         }
 

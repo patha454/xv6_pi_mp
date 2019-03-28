@@ -197,7 +197,6 @@ led25_off();
         }
 
 	}
-
     break;
   default:
     if(curr_proc == 0 || (tf->spsr & 0xF) != USER_MODE){

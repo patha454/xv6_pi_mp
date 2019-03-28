@@ -145,22 +145,46 @@ pagetable_invalidate:
 
 	//ldr	r2,=0x14c06	//Inner cache
 	//ldr	r2,=0x15c06 	//Outer cache
-	ldr	r2,=0x14406
+	ldr	r2,=0x14406     // 1 MiB page, bufferable, read/write at any privl, cacheable TEX (but not cached.)  
 
 	// Map __pa_init_start to __pa_init_start address
 	ldr	r1,=PHYSTART
 	lsr	r1, #20
-	orr	r3, r2, r1, lsl#20
+	orr	r3, r2, r1, lsl#20	
 	str	r3, [r0, r1, lsl#2]
 
+	//r0 is the page table base.
 	// Map __va_kernel_start to __pa_init_start address
-	ldr	r1,=PHYSTART
-	lsr	r1, #20
-	orr	r3, r2, r1, lsl#20
-	ldr	r1,=KERNBASE
-	lsr	r1, #20
-	str	r3, [r0, r1, lsl#2]
+	ldr	r1,=PHYSTART		// Load the physical address to map into r1
+	lsr	r1, #20			// Truncate to 1 MiB precision
+	orr	r3, r2, r1, lsl#20      // Set the properties for the page; store in r3.
+	ldr	r1,=KERNBASE		// Load the virtual address to map from.
+	lsr	r1, #20			// Truncate to 1 MiB precision
+	str	r3, [r0, r1, lsl#2]	// Store the entry in PDX(r1 << 2)
 
+//rpi2b_phy_mem:	
+//	.word 947		// Physical memory accessable on RPI2B.
+	
+	// Map the rest of the physical memory into kernel space.
+	// For now, this only maps 256 MiB - RPI2B has 947 avalible.
+	mov r5, #1			// Index of the page to be mapped
+map_kernel_pages:	
+	lsl r6, r5, #20			// Offset of the page to map.
+	ldr r1, =PHYSTART		// Load the base of the physical memory
+	add r1, r1, r6			// Compute physical address of the page to map.
+	lsr r1, #20			// Truncate to 1 MiB precision
+	orr r3, r2, r1, lsl#20		// Set the properties for the page; store in r3.
+	ldr r1, =KERNBASE		// Load the base of the virtual address range.
+	add r1, r1, r6			// Compute the virtual address to map from.
+	lsr r1, #20			// Truncate to 1 MiB precision.
+	str r3, [r0, r1, lsl#2]		// Store the entry in PDX(r1 << 2)
+	//ldr r7, [rpi2b_phy_mem]		// Move the number size of the physical memory into r7. 
+	cmp r5, #256			// Test if we've mapped in all avalible memory.
+	addne r5, r5, #1		// Increment the page index.
+	bne map_kernel_pages		// Map the next page
+	
+	
+	
 	// Map device MMIO (just GPIO for LED debug)
 	ldr	r2,=0xc16	//device template
 	ldr	r1,=(MMIO_PA+0x200000)
@@ -177,40 +201,30 @@ mp_continue:
 	dsb
 	ldr r1,=_pagingstart
 
-	 //Clear ICache and Dcache.
-	 #ifdef RPI1
-	 mov r0, #0
-	 mcr p15, 0, r0, c7, c10, 4 /* dsb */
-	 mov r0, #0
-	 mcr p15, 0, r0, c7, c14, 0 /* invalidate d-cache */
-	 mov r0, #0
-	 mcr p15, 0, r0, c7, c5, 0 /* invalidate i-cache */
-	 #else
-	 dsb
-	 isb
-	 #endif
+	//Clear ICache and Dcache on Cortex A7 (ARMv7)
+	#ifdef RPI1
+	mov r0, #0
+	mcr p15, 0, r0, c7, c10, 4 /* dsb */
+	mov r0, #0
+	mcr p15, 0, r0, c7, c14, 0 /* invalidate d-cache */
+	mov r0, #0
+	mcr p15, 0, r0, c7, c5, 0 /* invalidate i-cache */
+	#else
+	dsb
+	isb
+	//Cortex A53 (ARMv8) flush I Cache
+        mrc p15, 1, r0, c0, c0, 1
+	tst r0, #0x3
+	mov r0, #0
+	mcrne p15, 0, r0, c7, c5, 0
+	#endif	
 	// The I cache and D cache should be invalidated before enabeling cacheing.
-	
+
 	mrc	p15, 0, r0, c1, c0, 0
 	orr r0, r0,	#(0x1 << 13)	// High vector
-	//orr	r0, r0, #(0x1 << 12)	// Enable I$
+	orr	r0, r0, #(0x1 << 12)	// Enable I$
 	//orr	r0, r0, #(0x1 << 11)	// Enable flow prediction
-	//orr	r0, r0, #(0x1 <<  2)	// Enable D$
-	/* Enable depricated SWP atomic operation.
-	 * RPI2 (Cortex A7/ARMv7 encourages the use of the new LDREX and STREX
-	 * synchronisation primitives, but these require the both the I cache and
-	 * D cache enabled - which is more complex than just enabling the other
-	 * bits above.
-	 *
-	 * For now, we'll do it this way.
-	 *
-	 * Not that the RPI3 and later RPI2B use the Cortex A53 (ARM v8) which does
-	 * not support the SWP instruction - we'd have to use LDREX/STREX...
-	 * But the ARMv8 registers to enable and invalidate cache are diffrent to
-	 * the ARMv7, so we'd encounter compatilitity issues either way.
-	 * For now, we'll support the RPI2.
-	 */
-	orr     r0, r0, #(0x1 << 10)    // Enable depricated SWP atomic instruction.
+	orr	r0, r0, #(0x1 <<  2)	// Enable D$
 	orr	r0, r0, #0x1				// Enable MMU
 	mcr	p15, 0, r0, c1, c0, 0
 	bx r1
@@ -282,6 +296,13 @@ flush_idcache:
 	#else
 	dsb
 	isb
+	//Cortex A53 (ARMv8) flush I Cache
+	mrc p15, 1, r0, c0, c0, 1
+	tst r0, #0x3
+	mov r0, #0
+	mcrne p15, 0, r0, c7, c5, 0
+	//I Cache flushed.
+	//How to flush D Cache.
 	#endif
 	bx lr
 .global flush_tlb

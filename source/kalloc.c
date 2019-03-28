@@ -47,8 +47,10 @@ freerange(void *vstart, void *vend)
   char *p;
   p = (char*)PGROUNDUP((uint)vstart);
   // OkLoop never runs after this loop.
-  for(; p + PGSIZE <= (char*)vend; p += PGSIZE)
+  cprintf("Try to free to %p\n", (char*) vend);
+  for(; p + PGSIZE <= (char*)vend; p += PGSIZE) {
     kfree(p);
+  }
   //OkLoop();
 }
 
@@ -67,13 +69,15 @@ kfree(char *v)
   // Fill with junk to catch dangling refs.
   //memset(v, 1, PGSIZE); //commented out to speed up
 
-  if(kmem.use_lock)
+  if(kmem.use_lock){
     acquire(&kmem.lock);
+  }
   r = (struct run*)v;
   r->next = kmem.freelist;
   kmem.freelist = r;
-  if(kmem.use_lock)
+  if(kmem.use_lock) {
     release(&kmem.lock);
+  }
 }
 
 // Allocate one 4096-byte page of physical memory.

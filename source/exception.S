@@ -248,3 +248,20 @@ spin_release:
 	dmb			// Required before releasing protected resource.
 	str r1, [r0]		// Unlock mutex.
 	bx lr			// Return
+	
+/* swp_spin and swp_release don't work. The SWP instruction was removed from the ARMv8 chips. */
+.global swp_spin
+swp_spin:
+	mov r2, #1		// Move the locked value into r2.
+	swp r1, r2, [r0]	// Atomic swap lock with locked value.
+	//cmp r1, r2		// Compare old value to locked value.
+	//beq swp_spin		// If already locked, try again.
+	dmb			// Memory barrier
+	bx lr			// Swap
+
+.global swp_release	
+swp_release:
+	mov r1, #0		// Move the unlocked value into r1
+	str r1, [r0]		// Store in the locked location.
+	dmb			// Memory barrier
+	bx lr			// Return

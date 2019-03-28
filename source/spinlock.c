@@ -19,6 +19,7 @@
 extern void spin_acquire(void* lockvar);
 extern void spin_release(void* lockvar);
 
+
 void
 initlock(struct spinlock *lk, char *name)
 {
@@ -53,10 +54,7 @@ acquire(struct spinlock *lk)
     cprintf("lock name: %s, locked: %d, cpu: %x CPSR: %x\n", lk->name, lk->locked, lk->cpu, readcpsr());
     panic("acquire");
   }
-  //  cprintf("l");
-  //spin_acquire((void*) &(lk->locked));
   lk->locked = 1;
-  
   // Record info about lock acquisition for debugging.
   lk->cpu = curr_cpu;
 }
@@ -73,7 +71,6 @@ release(struct spinlock *lk)
   lk->cpu = 0;
 
   lk->locked = 0;
-  //spin_release((void*) &(lk->locked));
   popcli();
 }
 
