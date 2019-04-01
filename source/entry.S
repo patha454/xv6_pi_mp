@@ -178,8 +178,11 @@ map_kernel_pages:
 	add r1, r1, r6			// Compute the virtual address to map from.
 	lsr r1, #20			// Truncate to 1 MiB precision.
 	str r3, [r0, r1, lsl#2]		// Store the entry in PDX(r1 << 2)
-	//ldr r7, [rpi2b_phy_mem]		// Move the number size of the physical memory into r7. 
-	cmp r5, #256			// Test if we've mapped in all avalible memory.
+	//ldr r7, [rpi2b_phy_mem]		// Move the number size of the physical memory into r7.
+	ldr r7, =PHYSIZE		// Load the physical size to map
+	lsr r7, #20			// Break into mb
+	sub r7, r7, #1
+	cmp r5, r7 		      	// Test if we've mapped in all avalible memory.
 	addne r5, r5, #1		// Increment the page index.
 	bne map_kernel_pages		// Map the next page
 	
@@ -315,7 +318,10 @@ flush_tlb:
 	dsb
 	isb
 	mov	r0,#0
-	mcr	p15, 0, r0, c8, c7, 0	// Invalidate unified TLB
+	mcr     p15, 0, r0, c8, c6, 0   // Invalidate L1 data TLB.
+	mcr     p15, 0, r0, c8, c5, 0   // Invalidate L1 instruction TLB.
+	mcr	p15, 0, r0, c8, c7, 0	// Invalidate unified (L2) TLB
+	mcr     p15, 0, r0, c8, c3, 0   // Invalidate entire TLB inner shearalbe
 	mcr	p15, 0, r0, c7, c5, 6	// Invalidate BPIALL
 	dsb
 	isb

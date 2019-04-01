@@ -203,7 +203,17 @@ switchuvm(struct proc *p)
     panic("switchuvm: no pgdir");
 //cprintf("before copying uvm to kvm kpgdir=%x the first entry: %x\n", kpgdir, kpgdir[0]);
   memmove((void *)kpgdir, (void *)p->pgdir, PGSIZE);  // switch to new user address space
+  //On RPI1 flush_idcache only invalidates  the I cache.
+  #ifdef RPI1
   flush_idcache();
+  #else
+  // Flush the new pages to the physical memory.
+  // Do we flush the l2 entry.
+  flush_dcache_range((void *)kpgdir, PGSIZE);
+  // Invalidate all cached userspace addresses.
+  invalidate_dcache_range((void *) 0x80000000, p->sz);
+  flush_idcache();
+  #endif
   flush_tlb();
   popcli();
 }
@@ -295,7 +305,7 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     return oldsz;
 
   a = PGROUNDUP(newsz);
-  for(; a  < oldsz; a += PGSIZE){
+  for(; a < oldsz; a += PGSIZE){
     pte = walkpgdir(pgdir, (char*)a, UVMPDXATTR, 0);
     if(!pte)
       a += (NPTENTRIES - 1) * PGSIZE;

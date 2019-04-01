@@ -86,9 +86,16 @@ writemailbox(uint *addr, u8 channel)
 	x = a & 0xfffffff0;
 	y = x | (uint)(channel & 0xf);
 
+	#ifdef RPI1
 	flush_dcache_all();
-
+	#else
+	invalidate_dcache_range((void *) MAILBOX_BASE, 64);
+	#endif
 	while ((inw(MAILBOX_BASE+24) & 0x80000000) != 0);
 	//while ((inw(MAILBOX_BASE+0x38) & 0x80000000) != 0);
 	outw(MAILBOX_BASE+32, y);
+
+	#ifndef RPI1
+	flush_dcache_range((void *) MAILBOX_BASE, 32);
+	#endif
 }

@@ -69,6 +69,9 @@ void mmuinit0(void)
 	l1[PDX(va)] = (uint)l2|DOMAIN0|COARSE;
 	l2[PTX(va)] = PHYSTART|PTX_AP(K_RW)|SMALL;
 
+	flush_dcache_range((void*) l1, PGSIZE);
+	flush_dcache_range((void*) l2, PGSIZE);
+	dsb_barrier();
 	//	asm volatile("mov r1, #1\n\t"
 	//                "mcr p15, 0, r1, c3, c0\n\t"
 	//                "mov r1, #0x4000\n\t"
@@ -115,10 +118,15 @@ mmuinit1(void)
 	va2 = va1 + sizeof(pde_t);
 	va1 = va1 & ~((uint)CACHELINESIZE-1);
 	va2 = va2 & ~((uint)CACHELINESIZE-1);
+	#ifdef RPI1
 	flush_dcache(va1, va2);
-
+	#else
+	// TODO: Thest this just flushing the single entry.
+	flush_dcache_range((void*) l1, PGSIZE);
+	#endif
+ 
 	// invalidate TLB; DSB barrier used
 	flush_tlb();
-
+		
 }
 

@@ -249,19 +249,54 @@ spin_release:
 	str r1, [r0]		// Unlock mutex.
 	bx lr			// Return
 	
-/* swp_spin and swp_release don't work. The SWP instruction was removed from the ARMv8 chips. */
-.global swp_spin
-swp_spin:
-	mov r2, #1		// Move the locked value into r2.
-	swp r1, r2, [r0]	// Atomic swap lock with locked value.
-	//cmp r1, r2		// Compare old value to locked value.
-	//beq swp_spin		// If already locked, try again.
-	dmb			// Memory barrier
-	bx lr			// Swap
 
-.global swp_release	
-swp_release:
-	mov r1, #0		// Move the unlocked value into r1
-	str r1, [r0]		// Store in the locked location.
-	dmb			// Memory barrier
-	bx lr			// Return
+/** Flushes the data cache to physical memory.
+  *
+  * flush_dcache_range flushes a block of virtual addresses
+  * from the cache to the physical memory.
+  *
+  * r0: The first virtual address to flush.
+  * r1: The size of the block to flush.
+  */
+.global flush_dcache_range	
+flush_dcache_range:
+	dsb
+	mrc p15, 0, r2, c0, c0, 1 	// Read cache type register into r2.
+	ubfx r2, r2, #16, #4	        // Extract log2 of cache line size.
+	add r1, r1, r0	                // Compute the end address of the range.
+	sub r3, r2, #1                  // Subtract 1 from cache line size.
+	bic r0, r0, r3		        // Set r0 to the start of the first cache line in range.
+loop_flush_dcache_range:
+	mcr p15, 0, r0, c7, c14, 1      // Clean cache line at r0 to PoC.
+	add r0, r0, r2		        // Add log2(cache line size) to flush address
+	cmp r0, r1                      // Test if we've reached the end of the range.
+	blo loop_flush_dcache_range     // Repeat until all addresses are flushed.
+	dsb			        // Write all data to physical memory before continuing.
+	isb				// Flush instruction pipeline.
+	bx lr			        // Return
+
+/**
+  * Invalidates the data cache to physical memory (across all caches.)
+  *
+  * invalidate_dcache_range invalidates the cache entrys assosiated with
+  * a block of virtual addresses.
+  *
+  * r0: The first virtual address to invalidate.
+  * r1: The size of the block to invalidate.
+  */
+.global invalidate_dcache_range
+invalidate_dcache_range:
+	dsb
+	mrc p15, 0, r2, c0, c0, 1        // Read cache type register into r2.
+	ubfx r2, r2, #16, #4	         // Extract log2 of cache line size.
+	add r1, r1, r0		         // Compute the end address of the range.
+	sub r3, r2, #1                   // Substract 1 from log2(cacheLineSize)
+	bic r0, r0, r3		         // Set r0 to start from the first cache line in the range.
+loop_invalidate_dcache_range:
+	mcr p15, 0, r0, c7, c6,  1       // Invalidate cache line at r0 to PoC.
+	add r0, r0, r2		         // Add log2(cacheLineSize) - 1 to invalidate address.
+	cmp r0, r1		         // Test if we've reached the end of the range.
+	blo loop_invalidate_dcache_range // Repead until all addresses are invalidated.
+	dsb 				 // Write all data to physical memory before continuing.
+	isb				 // Flush instruction pipeline.
+	bx lr		                 // Return.
