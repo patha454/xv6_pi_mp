@@ -46,8 +46,6 @@ freerange(void *vstart, void *vend)
 {
   char *p;
   p = (char*)PGROUNDUP((uint)vstart);
-  // OkLoop never runs after this loop.
-  cprintf("Try to free to %p\n", (char*) vend);
   for(; p + PGSIZE <= (char*)vend; p += PGSIZE) {
     kfree(p);
   }

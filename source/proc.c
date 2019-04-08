@@ -124,6 +124,7 @@ int
 growproc(int n)
 {
   uint sz;
+  u32 old_sz =curr_proc->sz;
 
   sz = curr_proc->sz;
   if(n > 0){
@@ -134,7 +135,7 @@ growproc(int n)
       return -1;
   }
   curr_proc->sz = sz;
-  switchuvm(curr_proc);
+  switchuvm(curr_proc, old_sz);
   return 0;
 }
 
@@ -274,7 +275,7 @@ void
 scheduler(void)
 {
   struct proc *p;
-
+  u32 old_sz = 0;
   for(;;){
     // Enable interrupts on this processor.
     if(first_sched) first_sched = 0;
@@ -285,13 +286,15 @@ scheduler(void)
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+      if (curr_proc) {
+	old_sz = curr_proc->sz;
+      }
       curr_proc = p;
 //cprintf("before switching page table\n");
-      switchuvm(p);
+      switchuvm(p, old_sz);
       p->state = RUNNING;
 //cprintf("after switching page table\n");
 

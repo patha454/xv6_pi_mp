@@ -132,8 +132,10 @@ void            wakeup(void*);
 void            yield(void);
 
 
-// swtch.S
+// exception.S
 void            swtch(struct context**, struct context*);
+void            flush_dcache_range(void* start, u32 length);
+void            invalidate_dcache_range(void* start, u32 length);
 
 // syscall.c
 int             argint(int, int*);
@@ -215,7 +217,7 @@ void            freevm(pde_t*);
 void            inituvm(pde_t*, char*, uint);
 int             loaduvm(pde_t*, char*, struct inode*, uint, uint);
 pde_t*          copyuvm(pde_t*, uint);
-void            switchuvm(struct proc*);
+void            switchuvm(struct proc*, u32 old_sz);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);

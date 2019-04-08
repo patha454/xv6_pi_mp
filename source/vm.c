@@ -195,8 +195,22 @@ switchkvm_new(void)
 
 // Switch TSS and h/w page table to correspond to process p.
 void
-switchuvm(struct proc *p)
+switchuvm(struct proc *p, u32 old_sz)
 {
+  #ifndef RPI1
+  // Writeback the old process' cached data. The exception is
+  // on the switch to the first user process, when there is
+  // no valid old user mapping.
+  if (old_sz > 0) {
+    if (old_sz < p->sz) {
+      // Save old data. (flush_dcache_range also invalidates.)
+      flush_dcache_range((void*) 0x0, old_sz);
+    } else {
+      //If the user memory has been decreased, save all old data.
+      flush_dcache_range((void*) 0x0, p->sz);
+    }
+  }
+  #endif
   pushcli();
   //cpu->ts.esp0 = (uint)proc->kstack + KSTACKSIZE;
   if(p->pgdir == 0)
@@ -208,10 +222,13 @@ switchuvm(struct proc *p)
   flush_idcache();
   #else
   // Flush the new pages to the physical memory.
-  // Do we flush the l2 entry.
+  // Do we flush the l2 page table?
   flush_dcache_range((void *)kpgdir, PGSIZE);
-  // Invalidate all cached userspace addresses.
-  invalidate_dcache_range((void *) 0x80000000, p->sz);
+  flush_tlb();
+  // Invalidate any cache data from the old process which we might accidentally use.
+  if (old_sz > 0 && old_sz < p->sz) {
+    invalidate_dcache_range((void *) old_sz, p->sz - old_sz);
+  }
   flush_idcache();
   #endif
   flush_tlb();

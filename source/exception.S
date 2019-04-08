@@ -250,7 +250,7 @@ spin_release:
 	bx lr			// Return
 	
 
-/** Flushes the data cache to physical memory.
+/** Flushes and invalidates the data cache to physical memory.
   *
   * flush_dcache_range flushes a block of virtual addresses
   * from the cache to the physical memory.
@@ -261,13 +261,14 @@ spin_release:
 .global flush_dcache_range	
 flush_dcache_range:
 	dsb
+	isb
 	mrc p15, 0, r2, c0, c0, 1 	// Read cache type register into r2.
 	ubfx r2, r2, #16, #4	        // Extract log2 of cache line size.
 	add r1, r1, r0	                // Compute the end address of the range.
 	sub r3, r2, #1                  // Subtract 1 from cache line size.
 	bic r0, r0, r3		        // Set r0 to the start of the first cache line in range.
 loop_flush_dcache_range:
-	mcr p15, 0, r0, c7, c14, 1      // Clean cache line at r0 to PoC.
+	mcr p15, 0, r0, c7, c14, 1      // Clean and invalidate cache line at r0 to PoC.
 	add r0, r0, r2		        // Add log2(cache line size) to flush address
 	cmp r0, r1                      // Test if we've reached the end of the range.
 	blo loop_flush_dcache_range     // Repeat until all addresses are flushed.
@@ -287,6 +288,7 @@ loop_flush_dcache_range:
 .global invalidate_dcache_range
 invalidate_dcache_range:
 	dsb
+	isb
 	mrc p15, 0, r2, c0, c0, 1        // Read cache type register into r2.
 	ubfx r2, r2, #16, #4	         // Extract log2 of cache line size.
 	add r1, r1, r0		         // Compute the end address of the range.

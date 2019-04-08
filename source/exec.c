@@ -17,7 +17,7 @@ exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
-
+  u32 old_sz = 0;
   if((ip = namei(path)) == 0)
     return -1;
   ilock(ip);
@@ -85,13 +85,16 @@ exec(char *path, char **argv)
 
   // Commit to the user image.
   oldpgdir = curr_proc->pgdir;
+  if (curr_proc) {
+    old_sz = curr_proc->sz;
+  }
   curr_proc->pgdir = pgdir;
   curr_proc->sz = sz;
   curr_proc->tf->pc = elf.entry;  // main
   curr_proc->tf->sp = sp;
   curr_proc->tf->r0 = ustack[1];
   curr_proc->tf->r1 = ustack[2];
-  switchuvm(curr_proc);
+  switchuvm(curr_proc, old_sz);
   freevm(oldpgdir);
   return 0;
 

@@ -146,7 +146,7 @@ pagetable_invalidate:
 	//ldr	r2,=0x14c06	//Inner cache
 	//ldr	r2,=0x15c06 	//Outer cache
 	ldr	r2,=0x14406     // 1 MiB page, bufferable, read/write at any privl, cacheable TEX (but not cached.)  
-
+	//ldr     r2,=0x15c0e
 	// Map __pa_init_start to __pa_init_start address
 	ldr	r1,=PHYSTART
 	lsr	r1, #20
@@ -299,7 +299,7 @@ flush_idcache:
 	#else
 	dsb
 	isb
-	//Cortex A53 (ARMv8) flush I Cache
+	//Cortex A53 (ARMv8) flush I Cache only.
 	mrc p15, 1, r0, c0, c0, 1
 	tst r0, #0x3
 	mov r0, #0
