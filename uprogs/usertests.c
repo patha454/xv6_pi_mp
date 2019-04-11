@@ -329,27 +329,35 @@ mem(void)
 {
   void *m1, *m2;
   int pid, ppid;
-
+  int blocks = 0;
   printf(1, "mem test\n");
   ppid = getpid();
-  if((pid = fork()) == 0){
-    m1 = 0;
-    while((m2 = malloc(10001)) != 0){
-      *(char**)m2 = m1;
-      m1 = m2;
+  if((pid = fork()) == 0){               //The parent process executes the test.
+    m1 = 0;                              // m1 is a null pointer
+    while((m2 = malloc(10001)) != 0){    // Allocate ~10kb to m2.
+      *(char**)m2 = m1;                  // Set m2 to point to m1.
+      m1 = m2;                           // set m1 points to m2.
+      blocks++;
+      if (blocks >= 0x147A) {
+	printf(1, "Tested first 50MB. Breaking early for fast testing.\n");
+	m2 = 0;
+	break;
+      }
     }
-    while(m1){
-      m2 = *(char**)m1;
-      free(m1);
-      m1 = m2;
+    blocks = 0;
+    while(m1){                          // Untill m1 is null
+      m2 = *(char**)m1;                 // m2 = what m1 points to.
+      free(m1);                         // dealloc m1
+      m1 = m2;                          // Move m1 to m2
+      blocks++;
     }
-    m1 = malloc(1024*20);
+    m1 = malloc(1024*20);               // Alloc 20kb.
     if(m1 == 0){
       printf(1, "couldn't allocate mem?!!\n");
       kill(ppid);
       exit();
     }
-    free(m1);
+    free(m1);                         // Free the mem.
     printf(1, "mem ok\n");
     exit();
   } else {
@@ -1642,15 +1650,15 @@ main(int argc, char *argv[])
   bigargtest();
   bigwrite();
   bigargtest();
-  bsstest();
+  bsstest(); 
   sbrktest();
-  validatetest();
+   validatetest();
 
   opentest();
   writetest();
   writetest1();
   createtest();
-
+  
   mem();
   pipe1();
   preempt();

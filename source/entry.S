@@ -162,8 +162,6 @@ pagetable_invalidate:
 	lsr	r1, #20			// Truncate to 1 MiB precision
 	str	r3, [r0, r1, lsl#2]	// Store the entry in PDX(r1 << 2)
 
-//rpi2b_phy_mem:	
-//	.word 947		// Physical memory accessable on RPI2B.
 	
 	// Map the rest of the physical memory into kernel space.
 	// For now, this only maps 256 MiB - RPI2B has 947 avalible.
@@ -178,7 +176,6 @@ map_kernel_pages:
 	add r1, r1, r6			// Compute the virtual address to map from.
 	lsr r1, #20			// Truncate to 1 MiB precision.
 	str r3, [r0, r1, lsl#2]		// Store the entry in PDX(r1 << 2)
-	//ldr r7, [rpi2b_phy_mem]		// Move the number size of the physical memory into r7.
 	ldr r7, =PHYSIZE		// Load the physical size to map
 	lsr r7, #20			// Break into mb
 	sub r7, r7, #1
@@ -287,7 +284,7 @@ flush_dcache_all:
 	isb
 	#endif
 	bx lr
-.global flush_idcache
+.global flush_idcache	
 flush_idcache:
 	#ifdef RPI1
 	mov r0, #0
@@ -297,6 +294,10 @@ flush_idcache:
 	mov r0, #0
 	mcr p15, 0, r0, c7, c5, 0 /* invalidate i-cache */
 	#else
+	// RPI2/3 has no command to flush the entire data cache, so this only
+	// flushes the instruction cache.
+	// Use flush_dcache_range or invalidate_dcache_range to maintain
+	// sections of the data cache by virtual address.
 	dsb
 	isb
 	//Cortex A53 (ARMv8) flush I Cache only.
@@ -305,7 +306,7 @@ flush_idcache:
 	mov r0, #0
 	mcrne p15, 0, r0, c7, c5, 0
 	//I Cache flushed.
-	//How to flush D Cache.
+	//The entire D cache can not be flushed in ARMv8.
 	#endif
 	bx lr
 .global flush_tlb
