@@ -230,8 +230,8 @@ swtch:
 /** extern void spin_acquire(void* lock) */
 .global spin_acquire
 spin_acquire:
-	pld [r0]                // Coerce the lock into cache.
 	dmb
+	pld [r0]                // Coerce the lock into cache.
 	mov r1, #1		// Saved locked value in R1.
 spinloop:
 	ldrex r2, [r0]		// Load the lock.

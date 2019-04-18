@@ -83,8 +83,10 @@ void locktest(void) {
   cprintf("Locking...\n");
   spin_acquire((void *) &lock);
   cprintf("locked\n");
+  cprintf("Lock value: 0x%x\n", lock);
   spin_release((void *) &lock);
-  cprintf("Unloked\n");
+  cprintf("Unlocked\n");
+  cprintf("Lock value: 0x%x\n", lock);
 }
 
 uint mb_data[10];
@@ -136,7 +138,6 @@ int cmain()
     timer3init();
     cprintf("timer3init: OK\n");
     enableirqminiuart();
-    locktest();
     cprintf("Handing off to scheduler...\n");
 
     scheduler();

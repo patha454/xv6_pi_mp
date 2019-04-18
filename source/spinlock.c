@@ -35,26 +35,12 @@ initlock(struct spinlock *lk, char *name)
 void
 acquire(struct spinlock *lk)
 {
-  /*while (!acquired) {
-    __asm volatile ("LDREX    %[status],   %[lock] \n\t"
-		    "CMP      %[status],   #0 \n\t"
-		    "MOV      %[status],   #1 \n\t"
-		    "STREXEQ  %[success],  %[status], %[lock] \n\t"  
-		    : [lock] "+m" (lk->locked),
-		      [success] "=r" (acquired),
-		      [status] "+r" (lockStatus)
-		    : 
-		    : "cc");
-		    
-		    }
-
-  */
-  pushcli(); // disable interrupts to avoid deadlock.
-  if(holding(lk)){
+   pushcli(); // disable interrupts to avoid deadlock.
+   if(holding(lk)){
     cprintf("lock name: %s, locked: %d, cpu: %x CPSR: %x\n", lk->name, lk->locked, lk->cpu, readcpsr());
     panic("acquire");
   }
-  lk->locked = 1;
+  spin_acquire((void*) &lk->locked);
   // Record info about lock acquisition for debugging.
   lk->cpu = curr_cpu;
 }
@@ -69,8 +55,7 @@ release(struct spinlock *lk)
   
   lk->pcs[0] = 0;
   lk->cpu = 0;
-
-  lk->locked = 0;
+  spin_release((void*) &lk->locked);
   popcli();
 }
 

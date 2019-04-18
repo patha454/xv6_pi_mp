@@ -1,6 +1,6 @@
 // Mutual exclusion lock.
 struct spinlock {
-  u32 locked;       // Is the lock held?
+  u32 locked __attribute((aligned (4)));       // Is the lock held? 
   
   // For debugging:
   char *name;        // Name of lock.
