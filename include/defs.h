@@ -136,7 +136,8 @@ void            yield(void);
 void            swtch(struct context**, struct context*);
 void            flush_dcache_range(void* start, u32 length);
 void            invalidate_dcache_range(void* start, u32 length);
-
+u32             get_dsar(void);
+void            preload(void*);
 // syscall.c
 int             argint(int, int*);
 int             argptr(int, char**, int);
