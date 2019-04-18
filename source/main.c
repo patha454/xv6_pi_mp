@@ -72,13 +72,26 @@ void machinit(void)
 
 void enableirqminiuart(void);
 
+int lock __attribute((aligned (64))) = 0;
+
+void locktest(void) {
+  int attrb = (kpgdir[PDX(&lock)] << 12) >> 12;
+  invalidate_dcache_range(&lock, 4);
+  cprintf("Lock mem attrb: 0x%x\n", attrb);
+  cprintf("Lock value: 0x%x\n", lock);
+  cprintf("Lock addr: 0x%x\n", &lock);
+  cprintf("Locking...\n");
+  spin_acquire((void *) &lock);
+  cprintf("locked\n");
+  spin_release((void *) &lock);
+  cprintf("Unloked\n");
+}
 
 uint mb_data[10];
 
 int cmain()
 {
     mmuinit0();
-    
     machinit();
     #if defined (RPI1) || defined (RPI2)
     uartinit();
@@ -86,25 +99,23 @@ int cmain()
     uartinit_fvp();
     #endif
     dsb_barrier();
-    //OkLoop works until kinit.
     consoleinit();
     cprintf("\nHello World from xv6\n");
     kinit1(end, P2V((8*1024*1024)+PHYSTART));
-    //OkLoop();
+    cprintf("kinit1: Ok\n");
     mailboxinit();
-    gpuinit(); 
+    cprintf("Mailbox init: Ok\n");
+    gpuinit();
+    cprintf("GPU init: Ok\n");
     // collect some free space (8 MB) for imminent use
     // the physical space below 0x8000 is reserved for PGDIR and kernel stack
     kpgdir=p2v(K_PDX_BASE);
 
-    //mailboxinit();
-    pm_size = getpmsize();
+    pm_size = getpmsize();;
     cprintf("ARM memory: %x\n", pm_size);
     mmuinit1();
     cprintf("mmuinit1: OK\n");
-    //gpuinit();
     cprintf("ARM xv6 MP USB\n");
-    //cprintf("gpuinit: OK\n");
     pinit();
     cprintf("pinit: OK\n");
     tvinit();
@@ -125,6 +136,7 @@ int cmain()
     timer3init();
     cprintf("timer3init: OK\n");
     enableirqminiuart();
+    locktest();
     cprintf("Handing off to scheduler...\n");
 
     scheduler();

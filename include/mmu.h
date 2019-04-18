@@ -80,8 +80,42 @@
 
 #define PGDIR_BASE	P2V(K_PDX_BASE)
 
+/**
+ * KVMPDXATTR, UVMPDXATTR, UVMPTXATTR: The CACHED and BUFFERED
+ * bits are named for historical reasons.
+ * 
+ * In ARMv8, their names no longer describe their function:
+ * Setting the CACHED bit does not enable caching (directly),
+ * and setting the BUFFERED bit has does not enable or disable
+ * buffered write-back.
+ *
+ * Instead, the TEX bits, BUFFERED, and CACHED bits provide an
+ * an index into a table of possible memory attributes which
+ * describe how the page will be mapped.
+ * 
+ * See Table G5-12 "TEX, C, and B encodings when TRE == 0" in
+ * The ARMv8 Architecture Reference Manual for these encodings.
+ */
+
+/** L1 (inner) and L2 (outer) write-back buffered, allocate cache on read,
+ *  Do not allocate on write.
+ */
 #define KVMPDXATTR       DOMAIN0|PDX_AP(U_RW)|SECTION|CACHED|BUFFERED
 
+/**
+ * Not cached - treated as device memory.
+ * 
+ * TODO: Make this cachable.
+ */  
 #define UVMPDXATTR 	DOMAIN0|COARSE
+
 #define UVMPTXATTR	(PTX_AP(U_RW)^APX)|CACHED|BUFFERED|SMALL
+
+/**
+ * Kernel access only, 1MB sections, Inner and outer write-back buffered,
+ * allocate cache on read on write, with hardware cache-coherency enabled.
+ *
+ * This is equivilant to TEX = 001, S = 1, C = 1, B = 1, S = 1.
+ */
+#define KVM_L1_L2_CACHEABLE 0x1140e
 

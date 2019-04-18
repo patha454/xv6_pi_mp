@@ -49,7 +49,7 @@ void mmuinit0(void)
 
 	// identity map first MB of ram so mmu can be enabled
 	//l1[PDX(PHYSTART)] = PHYSTART|DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED;
-
+	//cprintf("Kernel attrb: 0x%x\n", DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED|L1_SHAREABLE);
 	// map IO region
 	va = MMIO_VA;
 	for(pa = MMIO_PA; pa < MMIO_PA+MMIO_SIZE; pa += MBYTE){
@@ -102,11 +102,9 @@ mmuinit1(void)
 	// map the rest of RAM after PHYSTART+PHYSIZE
         va = KERNBASE + PHYSIZE;
         for(pa = PHYSTART + PHYSIZE; pa < PHYSTART+pm_size; pa += MBYTE){
-                l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED;
-
-                //l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION;
-
-                va += MBYTE;
+	  l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION|CACHED|BUFFERED;
+	  //l1[PDX(va)] = pa|DOMAIN0|PDX_AP(K_RW)|SECTION;
+	  va += MBYTE;
         }
 
 

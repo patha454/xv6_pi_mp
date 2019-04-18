@@ -58,7 +58,12 @@ volatile uint *mailbuffer;
 
 void mailboxinit()
 {
-mailbuffer = (uint *)kalloc();
+  mailbuffer = (uint *)kalloc();
+  #ifdef RPI1
+  flush_dcache_all();
+  #else
+  invalidate_dcache_range((void*) mailbuffer, PGSIZE);
+  #endif
 }
 
 uint
@@ -71,7 +76,11 @@ again:
 	x = inw(MAILBOX_BASE);
 	z = x & 0xf; y = (uint)(channel & 0xf);
 	if(z != y) goto again;
-
+	#ifdef RPI1
+	flush_dcache_all();
+	#else
+	invalidate_dcache_range((void*) mailbuffer, PGSIZE);
+	#endif
 	return x&0xfffffff0;
 }
 
@@ -89,13 +98,8 @@ writemailbox(uint *addr, u8 channel)
 	#ifdef RPI1
 	flush_dcache_all();
 	#else
-	invalidate_dcache_range((void *) MAILBOX_BASE, 64);
+	flush_dcache_range((void*) addr, PGSIZE);
 	#endif
 	while ((inw(MAILBOX_BASE+24) & 0x80000000) != 0);
-	//while ((inw(MAILBOX_BASE+0x38) & 0x80000000) != 0);
 	outw(MAILBOX_BASE+32, y);
-
-	#ifndef RPI1
-	flush_dcache_range((void *) MAILBOX_BASE, 32);
-	#endif
 }

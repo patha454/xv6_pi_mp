@@ -100,6 +100,7 @@ skip:
 	cmp r3, r10
 	bgt loop1
 finished:
+	dsb
 
 	// MMU configurations
 	// Activate TTBR0 by TTBCR reg
@@ -138,14 +139,20 @@ pagetable_invalidate:
 	bpl	pagetable_invalidate
 
 	// Page table attribute
-	// 0x14406= 0b0010 100 01 0 0000 0 01 10
+	// 0x14406= 0b0010 100 01 0 0000 0 01 10  Outer disabled inner write back
 	// 0x14c06= 0b0010 100 11 0 0000 0 01 10
 	// 0x15c06= 0b0010 101 11 0 0000 0 01 10
+	// 0x1140e= 0b0010 001 01 0 0000 0 11 10  Inner & outer write back
+	//    140e= 0b0000 001 01 0 0000 0 11 10  Inner & outer write back not shearable
+	// 0x10408= 0b0010 000 01 0 0000 0 10 00  Inner & outer write though
+        // 0x16406= 0b0010-110 01 0 0000 0 01 10  Outer write through inner write back works
 	//            ZGSA-TEX-AP-I-DOMN-X-CB-10
-
+        //               2     10
 	//ldr	r2,=0x14c06	//Inner cache
 	//ldr	r2,=0x15c06 	//Outer cache
-	ldr	r2,=0x14406     // 1 MiB page, bufferable, read/write at any privl, cacheable TEX (but not cached.)  
+	//	ldr	r2,=0x14406    // 1 MiB page, bufferable, read/write at any privl, cacheable TEX (but not cached.)
+	//ldr r2, =0x1140e
+	ldr r2, =0x1140e
 	//ldr     r2,=0x15c0e
 	// Map __pa_init_start to __pa_init_start address
 	ldr	r1,=PHYSTART
@@ -182,7 +189,7 @@ map_kernel_pages:
 	cmp r5, r7 		      	// Test if we've mapped in all avalible memory.
 	addne r5, r5, #1		// Increment the page index.
 	bne map_kernel_pages		// Map the next page
-	
+	clrex
 	
 	
 	// Map device MMIO (just GPIO for LED debug)
@@ -217,22 +224,59 @@ mp_continue:
 	tst r0, #0x3
 	mov r0, #0
 	mcrne p15, 0, r0, c7, c5, 0
-	#endif	
+
+	//Cortex A53 (ARMv*) invalidate D cache
+	mov r0, #0
+	mcr p15, 2, r0, c0, c0, 0
+	mrc p15, 1, r0, c0, c0, 0
+
+	movw r1, #0x7fff
+	and r2, r1, r0, lsr #13
+
+	movw r1, #0x3ff
+
+	and r3, r1, r0, lsr #3
+	and r2, r2, #1
+
+	and r0, r0, #0x7
+	and r0, r0, #4
+
+	clz r1, r3
+	add r4, r3, #1
+1:	sub r2, r2, #1
+	mov r3, r4
+2:	subs r3, r3, #1
+	mov r5, r3, lsl r1
+	mov r6, r2, lsl r0
+	orr r5, r5, r6
+	mcr p15, 0, r5, c7, c6, 2
+	bgt 2b
+	cmp r2, #0
+	bgt 1b
+	dsb
+	isb
+	
+	ldr r1, =_pagingstart   // Restore clobbered register
+	#endif
+
+	//Cortex A53 ARMv8 flush D cache.
+	
 	// The I cache and D cache should be invalidated before enabeling cacheing.
 
 	mrc	p15, 0, r0, c1, c0, 0
 	orr r0, r0,	#(0x1 << 13)	// High vector
 	orr	r0, r0, #(0x1 << 12)	// Enable I$
-	//orr	r0, r0, #(0x1 << 11)	// Enable flow prediction
+	orr	r0, r0, #(0x1 << 11)	// Enable flow prediction
 	orr	r0, r0, #(0x1 <<  2)	// Enable D$
-	orr	r0, r0, #0x1				// Enable MMU
+	orr	r0, r0, #0x1	        // Enable MMU
+	bic     r0, r0, #(0x1 << 28)    // Disable TEX remap.
 	mcr	p15, 0, r0, c1, c0, 0
 	bx r1
 
 	.section .text
 .global _pagingstart
 _pagingstart:
-        //bl OkLook
+        //bl OkLoop
 	bl cmain  /* call C functions now */
 	bl NotOkLoop
 

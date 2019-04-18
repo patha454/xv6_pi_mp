@@ -241,7 +241,7 @@ cprintf(char *fmt, ...)
 	locking = cons.locking;
 	if(locking)
 		acquire(&cons.lock);
-
+	//OkLoop();
 	if (fmt == 0)
 		panic("null fmt");
 
@@ -335,6 +335,12 @@ panic(char *s)
 
 	for(;;)
 		;
+}
+
+void debuglock() {
+    cprintf("Lock addr: 0x%x\n", &cons.lock);
+    cprintf("Lock value: 0x%x\n", cons.lock.locked);
+    cprintf("var addr: 0x%x\n", &cons.lock.locked);	
 }
 
 #define C(x)  ((x)-'@')  // Control-x
@@ -516,7 +522,6 @@ void consoleinit(void)
 	initlock(&cons.lock, "console");
 	memset(&input, 0, sizeof(input));
 	initlock(&input.lock, "input");
-
 	memset(devsw, 0, sizeof(struct devsw)*NDEV);
 	devsw[CONSOLE].write = consolewrite;
 	devsw[CONSOLE].read = consoleread;

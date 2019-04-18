@@ -49,7 +49,6 @@ freerange(void *vstart, void *vend)
   for(; p + PGSIZE <= (char*)vend; p += PGSIZE) {
     kfree(p);
   }
-  //OkLoop();
 }
 
 //PAGEBREAK: 21
@@ -65,7 +64,7 @@ kfree(char *v)
     panic("kfree");
   }
   // Fill with junk to catch dangling refs.
-  memset(v, 1, PGSIZE); //commented out to speed up
+  memset(v, 0xff, PGSIZE); //commented out to speed up
 
   if(kmem.use_lock){
     acquire(&kmem.lock);

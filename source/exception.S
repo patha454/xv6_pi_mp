@@ -229,7 +229,9 @@ swtch:
 
 /** extern void spin_acquire(void* lock) */
 .global spin_acquire
-spin_acquire:	
+spin_acquire:
+	pld [r0]                // Coerce the lock into cache.
+	dmb
 	mov r1, #1		// Saved locked value in R1.
 spinloop:
 	ldrex r2, [r0]		// Load the lock.
@@ -302,3 +304,14 @@ loop_invalidate_dcache_range:
 	dsb 				 // Write all data to physical memory before continuing.
 	isb				 // Flush instruction pipeline.
 	bx lr		                 // Return.
+
+	//Get data status abort register.
+.global get_dsar
+get_dsar:
+	mrc p15, 0, r0, c5, c0, 0
+	bx lr
+
+.global preload
+preload:
+	pld [r0]                         // Preload r0,
+	bx lr                            // Return

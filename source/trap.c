@@ -204,6 +204,7 @@ led25_off();
       // In kernel, it must be our mistake.
       cprintf("unexpected trap %d from cpu %d addr %x spsr %x cpsr %x ifar %x\n",
               tf->trapno, curr_cpu->id, tf->pc, tf->spsr, tf->cpsr, tf->ifar);
+      cprintf("Data Fault Status Register: 0x%x\n", get_dsar());
       panic("trap");
     }
     // In user space, assume process misbehaved.
