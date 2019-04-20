@@ -202,13 +202,7 @@ switchuvm(struct proc *p, u32 old_sz)
   // on the switch to the first user process, when there is
   // no valid old user mapping.
   if (old_sz > 0) {
-    if (old_sz < p->sz) {
-      // Save old data. (flush_dcache_range also invalidates.)
       flush_dcache_range((void*) 0x0, old_sz);
-    } else {
-      //If the user memory has been decreased, save all old data.
-      flush_dcache_range((void*) 0x0, p->sz);
-    }
   }
   #endif
   pushcli();
