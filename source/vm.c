@@ -202,7 +202,11 @@ switchuvm(struct proc *p, u32 old_sz)
   // on the switch to the first user process, when there is
   // no valid old user mapping.
   if (old_sz > 0) {
+    if (old_sz < p->sz) {
       flush_dcache_range((void*) 0x0, old_sz);
+      } else {
+      flush_dcache_range((void*) 0x0, p->sz);
+    }
   }
   #endif
   pushcli();

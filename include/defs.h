@@ -134,6 +134,8 @@ void            yield(void);
 
 // exception.S
 void            swtch(struct context**, struct context*);
+void            spin_acquire(void* lock);
+void            spin_release(void* lock);
 void            flush_dcache_range(void* start, u32 length);
 void            invalidate_dcache_range(void* start, u32 length);
 u32             get_dsar(void);
