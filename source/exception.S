@@ -315,3 +315,9 @@ get_dsar:
 preload:
 	pld [r0]                         // Preload r0,
 	bx lr                            // Return
+
+.global cpu_id
+cpu_id:
+	mrc p15, 0, r0, c0, c0, 5        // Read MPIDR
+	ubfx r0, r0, #0, #8              // Extract CPU id.
+	bx lr                            // Return

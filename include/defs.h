@@ -133,6 +133,8 @@ void            yield(void);
 
 
 // exception.S
+
+u32             cpu_id();
 void            swtch(struct context**, struct context*);
 void            spin_acquire(void* lock);
 void            spin_release(void* lock);

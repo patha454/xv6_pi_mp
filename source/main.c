@@ -66,7 +66,11 @@ unsigned int getpmsize()
 
 void machinit(void)
 {
-    memset(cpus, 0, sizeof(struct cpu)*NCPU);
+  int cpu;
+  memset(cpus, 0, sizeof(struct cpu)*NCPU);
+  for (cpu = 0; cpu < NCPU; cpu++) {
+    cpus[cpu].id = cpu;
+  }
 }
 
 
@@ -89,7 +93,12 @@ void locktest(void) {
   cprintf("Lock value: 0x%x\n", lock);
 }
 
-uint mb_data[10];
+void startothers(void)
+{
+  cprintf("CPU %d: OK\n", curr_cpu->id);
+  curr_cpu->started = 1;
+  return;
+}
 
 int cmain()
 {
@@ -138,6 +147,7 @@ int cmain()
     timer3init();
     cprintf("timer3init: OK\n");
     enableirqminiuart();
+    startothers();
     cprintf("Handing off to scheduler...\n");
 
     scheduler();

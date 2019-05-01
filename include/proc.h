@@ -37,8 +37,8 @@ struct cpu cpus[NCPU];
 //extern struct cpu *cpu asm("%gs:0");       // &cpus[cpunum()]
 //extern struct proc *proc asm("%gs:4");     // cpus[cpunum()].proc
 
-#define curr_cpu (&cpus[0])
-#define curr_proc   (cpus[0].proc)
+#define curr_cpu    (&cpus[cpu_id()])
+#define curr_proc   (cpus[cpu_id()].proc)
 
 //PAGEBREAK: 17
 // Saved registers for kernel context switches.
