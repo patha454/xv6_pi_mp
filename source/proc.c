@@ -25,7 +25,7 @@ struct {
 
 static struct proc *initproc;
 
-int first_sched = 1;
+//int first_sched = 1;
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
@@ -278,7 +278,7 @@ scheduler(void)
   u32 old_sz = 0;
   for(;;){
     // Enable interrupts on this processor.
-    if(first_sched) first_sched = 0;
+    if(curr_cpu->first_sched) curr_cpu->first_sched = 0;
     else sti();
 
     // Loop over process table looking for process to run.

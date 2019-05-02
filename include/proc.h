@@ -14,6 +14,7 @@
 struct cpu {
   uchar id;                    // Local APIC ID; index into cpus[] below
   struct context *scheduler;   // swtch() here to enter scheduler
+  int first_sched;             // Has the CPU entered the scheduler before.
   volatile uint started;       // Has the CPU started?
   int ncli;                    // Depth of pushcli nesting.
   int intena;                  // Were interrupts enabled before pushcli?

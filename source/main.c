@@ -70,6 +70,7 @@ void machinit(void)
   memset(cpus, 0, sizeof(struct cpu)*NCPU);
   for (cpu = 0; cpu < NCPU; cpu++) {
     cpus[cpu].id = cpu;
+    cpus[cpu].first_sched = 1;
   }
 }
 
