@@ -37,7 +37,6 @@ void		drawcharacter(u8, uint, uint);
 void		gpuputc(uint);
 void		gpuinit(void);
 
-
 // fs.c
 void            readsb(int dev, struct superblock *sb);
 int             dirlink(struct inode*, char*, uint);
@@ -135,6 +134,7 @@ void            yield(void);
 // exception.S
 
 u32             cpu_id();
+void            signal_event(void);
 void            swtch(struct context**, struct context*);
 void            spin_acquire(void* lock);
 void            spin_release(void* lock);

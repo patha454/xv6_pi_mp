@@ -321,3 +321,8 @@ cpu_id:
 	mrc p15, 0, r0, c0, c0, 5        // Read MPIDR
 	ubfx r0, r0, #0, #8              // Extract CPU id.
 	bx lr                            // Return
+	
+.global signal_event
+signal_event:	
+        sev
+	bx lr

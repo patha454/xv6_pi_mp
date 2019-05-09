@@ -22,6 +22,7 @@ extern char end[]; // first address after kernel loaded from ELF file
 extern pde_t *kpgdir;
 extern volatile uint *mailbuffer;
 extern unsigned int pm_size;
+volatile extern u32 cpu_sig[];
 
 void basic_delay(uint n) {
   uint sum;
@@ -94,12 +95,26 @@ void locktest(void) {
   cprintf("Lock value: 0x%x\n", lock);
 }
 
+void _start(void);
+
 void startothers(void)
 {
   cprintf("CPU %d: OK\n", curr_cpu->id);
   curr_cpu->started = 1;
   return;
 }
+
+/**
+ * Configure and start secondary CPUs.
+ * aux_main assumes the primary CPU has already
+ * initialised shared OS data structures.
+ */
+void aux_main(void)
+{
+  cprintf("CPU %d: Booting\n", curr_cpu->id);
+  while (1) {}
+}
+
 
 int cmain()
 {
@@ -149,6 +164,13 @@ int cmain()
     cprintf("timer3init: OK\n");
     enableirqminiuart();
     startothers();
+    cprintf("CPUSIG Addr: 0x%x\n", cpu_sig);
+    invalidate_dcache_range((void*) cpu_sig, 20);
+    cprintf("CPUSIG0: 0x%x\n", cpu_sig[0]);
+    cprintf("CPUSIG1: 0x%x\n", cpu_sig[1]);
+    cprintf("CPUSIG2: 0x%x\n", cpu_sig[2]);
+    cprintf("CPUSIG3: 0x%x\n", cpu_sig[3]);
+    cprintf("EXE Count: 0x%x\n", cpu_sig[4]);
     cprintf("Handing off to scheduler...\n");
 
     scheduler();

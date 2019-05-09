@@ -1,4 +1,4 @@
-/*****************************************************************
+/*******************************************************************
 *	entry.s
 *	by Zhiyi Huang, hzy@cs.otago.ac.nz
 *	University of Otago
@@ -6,6 +6,9 @@
 ********************************************************************/
 
 .section .init, "ax"
+
+.equ VA_OFFSET, 0x80000000
+	
 .globl _start
 _start:
 	b boot_reset
@@ -19,16 +22,36 @@ _start:
 
 	.balign 4
 boot_sleep:
+	// Note core error in shared memory
+	mcr 	p15, 0, r0, c0, c0, 5
+	ubfx	r0, r0, #0, #8
+	lsl 	r0, #2
+	ldr 	r1, =cpu_sig
+	ldr 	r2, =VA_OFFSET
+	sub 	r1, r1, r2
+	mov 	r2, #0xff                   //We use 0xFF as the early boot error code.
+	str	r1, [r1, r0]
 	wfe
 	b boot_sleep
 
 boot_reset:
+	
 	// Switch to SVC mode, all interrupts disabled
 	.set PSR_MODE_SVC, 0x13
 	.set PSR_MODE_IRQ_DISABLED, (1<<7)
 	.set PSR_MODE_FIQ_DISABLED, (1<<6)
 	msr	cpsr_c, #(PSR_MODE_SVC + PSR_MODE_FIQ_DISABLED + PSR_MODE_IRQ_DISABLED)
 
+	//Note which cores have started.
+	mrc  	p15, 0, r0, c0, c0, 5	//Read MP affinity register
+	ubfx 	r0, r0, #0, #8	        //Extract core ID
+	lsl  	r0, #2			//Multiply by 4 to convert onto a byte offset.
+	ldr   	r1, =cpu_sig		//Load CPU_SIGNAL VA
+	ldr 	r2, =VA_OFFSET          //Load the VA/PA offset
+	sub 	r1, r1, r2		//Convert CPU_SIGnAL VA to PA.
+	mov	r2, #1			//Move CPU_STARTED signal into r2 - PC test actual addr
+	str     r2, [r1, r0]            //Store CPU_STARTED signal in the core's CPU_SIGNAL slot.
+	
 	// Disable caches, MMU, and flow prediction
 	mrc	p15, 0, r0, c1, c0, 0
 	bic	r0, r0, #(0x1 << 12)	// Disable instruction cache
@@ -41,6 +64,12 @@ boot_reset:
 	mrc	p15, 0, r0, c1, c0, 1
 	orr	r0, r0, #(1 << 6)
 	mcr	p15, 0, r0, c1, c0, 1
+
+	// Or the ECTLR.SMPEN bit on the A53.
+	mrrc    p15, 1, r0, r1, c15
+	orr     r0, #1 << 6
+	orr     r1, #1 << 6
+	mcrr    p15, 1, r0, r1, c15
 
 	// Invalidate TLB and branch prediction caches.
 	mov	r0,#0
@@ -121,10 +150,11 @@ finished:
 
 	// Set all CPUs to wait except the primary CPU
 	mrc p15, 0, r0, c0, c0, 5
-	ands r0, r0, #0x03
+	ubfx r0, r0, #0, #8
+	cmp r0, #0
 	wfene
 	bne mp_continue
-
+	
 	// MMU Phase 1
 	// Create master translation table (page directory index)
 mmu_phase1:
@@ -276,8 +306,11 @@ mp_continue:
 	.section .text
 .global _pagingstart
 _pagingstart:
-        //bl OkLoop
-	bl cmain  /* call C functions now */
+        mrc p15, 0, r5, c0, c0, 5	// Read MPIDR into r5
+	ubfx r5, r5, #0, #8		// Extract CPU ID.
+	ands r5, r5, #0x3               // Test if this is the master CPU.
+	bleq cmain  /* Init OS with the primary CPU */
+	bl aux_main /* Init secondary CPUs. */               
 	bl NotOkLoop
 
 .global acknowledge
@@ -393,12 +426,21 @@ getsystemtime:
 	ldrd r0, r1, [r0]
 	bx lr
 
+.global cpu_sig
+cpu_sig:	
+core0:	.word  0x0
+core1:	.word  0x0
+core2:	.word  0x0
+core3:	.word  0x0
+
 .section .data
 
 .align 4
 .globl font
 font:
 	.incbin "font1.bin"
+
+
 
 .align 4
 .global _binary_initcode_start
