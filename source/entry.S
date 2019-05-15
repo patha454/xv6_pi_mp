@@ -30,7 +30,7 @@ boot_sleep:
 	ldr 	r2, =VA_OFFSET
 	sub 	r1, r1, r2
 	mov 	r2, #0xff                   //We use 0xFF as the early boot error code.
-	str	r1, [r1, r0]
+	str	r2, [r1, r0]
 	wfe
 	b boot_sleep
 
@@ -43,14 +43,14 @@ boot_reset:
 	msr	cpsr_c, #(PSR_MODE_SVC + PSR_MODE_FIQ_DISABLED + PSR_MODE_IRQ_DISABLED)
 
 	//Note which cores have started.
-	mrc  	p15, 0, r0, c0, c0, 5	//Read MP affinity register
-	ubfx 	r0, r0, #0, #8	        //Extract core ID
-	lsl  	r0, #2			//Multiply by 4 to convert onto a byte offset.
-	ldr   	r1, =cpu_sig		//Load CPU_SIGNAL VA
-	ldr 	r2, =VA_OFFSET          //Load the VA/PA offset
-	sub 	r1, r1, r2		//Convert CPU_SIGnAL VA to PA.
-	mov	r2, #1			//Move CPU_STARTED signal into r2 - PC test actual addr
-	str     r2, [r1, r0]            //Store CPU_STARTED signal in the core's CPU_SIGNAL slot.
+	//mrc  	p15, 0, r0, c0, c0, 5	//Read MP affinity register
+	//ubfx 	r0, r0, #0, #8	        //Extract core ID
+	//lsl  	r0, #2			//Multiply by 4 to convert onto a byte offset.
+	//ldr   	r1, =cpu_sig		//Load CPU_SIGNAL VA
+	//ldr 	r2, =VA_OFFSET          //Load the VA/PA offset
+	//sub 	r1, r1, r2		//Convert CPU_SIGnAL VA to PA.
+	//mov	r2, #1			//Move CPU_STARTED signal into r2 - PC test actual addr
+	//str     r2, [r1, r0]            //Store CPU_STARTED signal in the core's CPU_SIGNAL slot.
 	
 	// Disable caches, MMU, and flow prediction
 	mrc	p15, 0, r0, c1, c0, 0
@@ -152,6 +152,7 @@ finished:
 	mrc p15, 0, r0, c0, c0, 5
 	ubfx r0, r0, #0, #8
 	cmp r0, #0
+	
 	wfene
 	bne mp_continue
 	
@@ -233,7 +234,16 @@ map_kernel_pages:
 
 	// All processors will start from here after waiting:
 mp_continue:
-	ldr sp, =(KERNBASE+0x3000)
+	// Set up 4k per core system tacks.
+
+	mrc 	p15, 0, r0, c0, c0, 5          // Store CPU id in r0
+	ubfx 	r0, r0, #0, #8
+	add     r1, r0, #1                     // Compute stack offset in r1
+	lsl     r1, #12
+	ldr     r2, =KERNBASE                  // Compute stack address in r1
+	add     r1, r1, r2
+	mov 	sp, r1		              // Set the stack pointer
+	
 	// Enable I/D$, MMU, and flow prediction.
 	dsb
 	ldr r1,=_pagingstart
@@ -286,7 +296,6 @@ mp_continue:
 	dsb
 	isb
 	
-	ldr r1, =_pagingstart   // Restore clobbered register
 	#endif
 
 	//Cortex A53 ARMv8 flush D cache.
@@ -301,6 +310,17 @@ mp_continue:
 	orr	r0, r0, #0x1	        // Enable MMU
 	bic     r0, r0, #(0x1 << 28)    // Disable TEX remap.
 	mcr	p15, 0, r0, c1, c0, 0
+
+	mrc  	p15, 0, r0, c0, c0, 5	//Read MP affinity register
+	ubfx 	r0, r0, #0, #8	        //Extract core ID
+	lsl  	r0, #2			//Multiply by 4 to convert onto a byte offset.
+	ldr     r1, =cpu_sig		//Load CPU_SIGNAL VA
+	ldr 	r2, =VA_OFFSET          //Load the VA/PA offset
+	sub 	r1, r1, r2		//Convert CPU_SIGnAL VA to PA.
+	mov	r2, #1			//Move CPU_STARTED signal into r2 - PC test actual addr
+	str     r2, [r1, r0]            //Store CPU_STARTED signal in the core's CPU_SIGNAL slot.
+
+	ldr r1, =_pagingstart
 	bx r1
 
 	.section .text

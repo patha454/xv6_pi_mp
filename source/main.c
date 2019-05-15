@@ -99,8 +99,29 @@ void _start(void);
 
 void startothers(void)
 {
-  cprintf("CPU %d: OK\n", curr_cpu->id);
+  cprintf("CPU %x: OK\n", cpu_id());
+  cprintf("CPU %x: Still OK\n", cpu_id());
   curr_cpu->started = 1;
+  signal_event();
+  cprintf("CPU %x: Looping\n", cpu_id());
+  invalidate_dcache_range((void*) cpu_sig, 20);
+  cprintf("CPUSIG0: 0x%x\n", cpu_sig[0]);
+  cprintf("CPUSIG1: 0x%x\n", cpu_sig[1]);
+  cprintf("CPUSIG2: 0x%x\n", cpu_sig[2]);
+  cprintf("CPUSIG3: 0x%x\n", cpu_sig[3]);
+  while (1) {
+    u32 boot_target = 2;
+    int ready = 1;
+    for (int i = 1; i < NCPU; i++) {
+      if (cpu_sig[i] != boot_target) {
+	ready = 0;
+      }
+    }
+    if (ready) {
+      cprintf("Other cores booted. Continuing.\n");
+      break;
+    }
+  }
   return;
 }
 
@@ -111,7 +132,9 @@ void startothers(void)
  */
 void aux_main(void)
 {
-  cprintf("CPU %d: Booting\n", curr_cpu->id);
+  cpu_sig[curr_cpu->id] = 2;
+  cprintf("CPU %d: Booted\n", curr_cpu->id);
+  //Teardown identiy mapping?
   while (1) {}
 }
 
@@ -140,6 +163,7 @@ int cmain()
 
     pm_size = getpmsize();;
     cprintf("ARM memory: %x\n", pm_size);
+    startothers();
     mmuinit1();
     cprintf("mmuinit1: OK\n");
     cprintf("ARM xv6 MP USB\n");
@@ -163,14 +187,12 @@ int cmain()
     timer3init();
     cprintf("timer3init: OK\n");
     enableirqminiuart();
-    startothers();
     cprintf("CPUSIG Addr: 0x%x\n", cpu_sig);
     invalidate_dcache_range((void*) cpu_sig, 20);
     cprintf("CPUSIG0: 0x%x\n", cpu_sig[0]);
     cprintf("CPUSIG1: 0x%x\n", cpu_sig[1]);
     cprintf("CPUSIG2: 0x%x\n", cpu_sig[2]);
     cprintf("CPUSIG3: 0x%x\n", cpu_sig[3]);
-    cprintf("EXE Count: 0x%x\n", cpu_sig[4]);
     cprintf("Handing off to scheduler...\n");
 
     scheduler();
