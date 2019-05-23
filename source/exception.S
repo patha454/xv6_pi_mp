@@ -326,3 +326,13 @@ cpu_id:
 signal_event:	
         sev
 	bx lr
+
+.global wait_for_event
+wait_for_event:
+	wfe
+	bx lr
+	
+.global get_ttbr0
+get_ttbr0:
+	mrc p15, 0, r0, c2, c0, 0        //Read TTRB0
+	bx lr

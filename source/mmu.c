@@ -10,8 +10,25 @@
 #include "defs.h"
 #include "memlayout.h"
 #include "mmu.h"
+#include "param.h"
+#include "proc.h"
 
 unsigned int pm_size;
+
+/** Spare memory for the secondary core page tables.
+ *  We need this memory statically allocated because
+ *  each core's page table must be contigious but 
+ *  kv6's dynamic allocator cannot guarentee the kernel
+ *  contigious pages.
+ * 
+ *  Page directories must be aligned to 0x4000 bytes.
+ */
+
+struct ptable_t {
+  pde_t pgdir[4096];
+}  __attribute__((aligned (0x4000)));
+
+struct ptable_t sptable[NCPU - 1];
 
 void mmuinit0(void)
 {
@@ -126,5 +143,19 @@ mmuinit1(void)
 	// invalidate TLB; DSB barrier used
 	flush_tlb();
 		
+}
+
+// Duplicates the master core page table for each core.
+void aux_mmu_init(void)
+{
+  uint ttbr;
+  //Copy the page table.
+  curr_cpu->kpgdir = (void*) &sptable[curr_cpu->id - 1];
+  memmove(curr_cpu->kpgdir, (void*) p2v(K_PDX_BASE), 4096 * sizeof(pde_t));
+  //Set up the Translation Table Base Register for the core.
+  ttbr = (uint) curr_cpu->kpgdir;
+  ttbr |= 0x08;
+  ttbr |= 0x40;
+  set_pgtbase((void*) v2p((void*) ttbr));
 }
 

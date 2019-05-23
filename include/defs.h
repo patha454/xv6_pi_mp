@@ -14,13 +14,14 @@ void NotOkLoop(void);
 // mmu.c
 void mmuinit0(void);
 void mmuinit1(void);
+void aux_mmu_init(void);
 void barriers(void);
 void dsb_barrier(void);
 void flush_tlb(void);
 void flush_dcache_all(void);
 void flush_dcache(uint va1, uint va2);
 void flush_idcache(void);
-void set_pgtbase(uint base);
+void set_pgtbase(pde_t* base);
 
 // bio.c
 void            binit(void);
@@ -135,12 +136,14 @@ void            yield(void);
 
 u32             cpu_id();
 void            signal_event(void);
+void            wait_for_event(void);
 void            swtch(struct context**, struct context*);
 void            spin_acquire(void* lock);
 void            spin_release(void* lock);
 void            flush_dcache_range(void* start, u32 length);
 void            invalidate_dcache_range(void* start, u32 length);
 u32             get_dsar(void);
+u32             get_ttbr0(void);
 void            preload(void*);
 // syscall.c
 int             argint(int, int*);

@@ -20,7 +20,7 @@ extern char data[];  // defined by kernel.ld
 extern char end[];  // defined by kernel.ld
 extern unsigned int pm_size;
 
-pde_t *kpgdir;  // for use in scheduler()
+//pde_t *kpgdir;  // for use in scheduler()
 
 // Return the address of the PTE in page table pgdir
 // that corresponds to virtual address va.  If alloc!=0,
@@ -150,7 +150,7 @@ setupkvm_new(void)
 /*  if((pgdir = (pde_t*)kalloc()) == 0)
     return 0;*/
 
-  pgdir = kpgdir;
+  pgdir = curr_cpu->kpgdir;
   memset(pgdir, 0, 4*PGSIZE);
   if (p2v(pm_size) > (void*)MMIO_VA)
     panic("PHYSTOP (pm_size) too high");
@@ -167,7 +167,7 @@ setupkvm_new(void)
 void
 kvmalloc(void)
 {
-  kpgdir = setupkvm_new();
+  curr_cpu->kpgdir = setupkvm_new();
   switchkvm();
 }
 
@@ -186,7 +186,7 @@ switchkvm_new(void)
   dsb_barrier();
   flush_idcache();
   //cprintf("The phy pgtbase address is %x\n", (uint)v2p(kpgdir));
-  set_pgtbase((uint)v2p(kpgdir));   // switch to the kernel page table
+  set_pgtbase((void*)v2p(curr_cpu->kpgdir));   // switch to the kernel page table
   //cprintf("after set_pgtbase\n");
   dsb_barrier();
   flush_tlb();
@@ -214,14 +214,14 @@ switchuvm(struct proc *p, u32 old_sz)
   if(p->pgdir == 0)
     panic("switchuvm: no pgdir");
 //cprintf("before copying uvm to kvm kpgdir=%x the first entry: %x\n", kpgdir, kpgdir[0]);
-  memmove((void *)kpgdir, (void *)p->pgdir, PGSIZE);  // switch to new user address space
+  memmove((void *)curr_cpu->kpgdir, (void *)p->pgdir, PGSIZE);  // switch to new user address space
   //On RPI1 flush_idcache only invalidates  the I cache.
   #ifdef RPI1
   flush_idcache();
   #else
   // Flush the new pages to the physical memory.
   // Do we flush the l2 page table?
-  flush_dcache_range((void *)kpgdir, PGSIZE);
+  flush_dcache_range((void *)curr_cpu->kpgdir, PGSIZE);
   flush_tlb();
   // Invalidate any cache data from the old process which we might accidentally use.
   if (old_sz > 0 && old_sz < p->sz) {

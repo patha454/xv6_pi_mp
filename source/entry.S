@@ -239,7 +239,7 @@ mp_continue:
 	mrc 	p15, 0, r0, c0, c0, 5          // Store CPU id in r0
 	ubfx 	r0, r0, #0, #8
 	add     r1, r0, #1                     // Compute stack offset in r1
-	lsl     r1, #12
+	lsl     r1, #11
 	ldr     r2, =KERNBASE                  // Compute stack address in r1
 	add     r1, r1, r2
 	mov 	sp, r1		              // Set the stack pointer
@@ -428,7 +428,7 @@ flush_tlb:
 .global flush_dcache /* flush a range of data cache flush_dcache(va1, va2) */
 flush_dcache:
 	#ifdef RPI1
-	mcrr p15, 0, r0, r1, c14
+	mcrr p15, 0, r0, r1, c14, 0
 	#else
 	dsb
 	isb

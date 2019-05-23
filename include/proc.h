@@ -18,6 +18,7 @@ struct cpu {
   volatile uint started;       // Has the CPU started?
   int ncli;                    // Depth of pushcli nesting.
   int intena;                  // Were interrupts enabled before pushcli?
+  pde_t *kpgdir;                // The page table for the CPU.
   
   // Cpu-local storage variables; see below
   struct cpu *cpu;
@@ -67,6 +68,8 @@ struct context {
 };
 
 enum procstate { UNUSED=0, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+
+enum cpustate { UNSTARTED=1, STARTED=1,CENTRY=2, SCHED=3, ERROR=0xff };
 
 // Per-process state
 struct proc {
