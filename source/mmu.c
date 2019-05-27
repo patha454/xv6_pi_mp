@@ -152,10 +152,12 @@ void aux_mmu_init(void)
   //Copy the page table.
   curr_cpu->kpgdir = (void*) &sptable[curr_cpu->id - 1];
   memmove(curr_cpu->kpgdir, (void*) p2v(K_PDX_BASE), 4096 * sizeof(pde_t));
+  flush_dcache_range((void*) curr_cpu->kpgdir, 4096 * sizeof(pde_t));
   //Set up the Translation Table Base Register for the core.
   ttbr = (uint) curr_cpu->kpgdir;
   ttbr |= 0x08;
   ttbr |= 0x40;
   set_pgtbase((void*) v2p((void*) ttbr));
+  flush_tlb();
 }
 
