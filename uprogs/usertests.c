@@ -1637,10 +1637,21 @@ rand()
 }
 
 int
-main(int argc, char *argv[])
+main(int argc, char *argv[])  
 {
+  int test_mem = 0;
+  int test_preempt = 0;
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == 'm') {
+      test_mem = 1;
+      continue;
+    }
+    if (argv[i][0] == 'p') {
+      test_preempt = 1;
+      continue;
+    }
+  }
   printf(1, "usertests starting\n");
-
   if(open("usertests.ran", 0) >= 0){
     printf(1, "already ran user tests -- rebuild fs.img\n");
     exit();
@@ -1658,10 +1669,21 @@ main(int argc, char *argv[])
   writetest();
   writetest1();
   createtest();
+
+  if (test_mem) {
+    mem();
+  } else {
+    printf(1, "Skipping memory test because the test is slow. Run 'usertests m' to test the memory\n");
+  }
   
-  mem();
   pipe1();
-  preempt();
+
+  if (test_preempt) {
+    preempt(); 
+  } else {
+    printf(1, "Skipping preempt test: Test is designed for two or less cores. Run 'usertests p' to test preemption\n");
+  }
+  
   exitwait();
 
   rmdot();
