@@ -1,11 +1,35 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
+#include "param.h"
+
+#define BUFFERSIZE 512
+struct buffer {
+  char data[BUFFERSIZE];
+  uint length;
+};
+
+struct buffer writebuffer[NOFILE];
 
 static void
 putc(int fd, char c)
 {
-  write(fd, &c, 1);
+  if (fd >= NOFILE) {
+    return;
+  }
+  writebuffer[fd].data[writebuffer[fd].length++] = c;
+  if (c == '\0' || c == '\n'|| writebuffer[fd].length == BUFFERSIZE) {
+    write(fd, &writebuffer[fd].data, writebuffer[fd].length);
+    writebuffer[fd].length = 0;
+  }
+  // write(fd, &c, 1);
+}
+
+static void flushbuffer(int fd) {
+  if (writebuffer[fd].length > 0) {
+    write(fd, &writebuffer[fd].data, writebuffer[fd].length);
+    writebuffer[fd].length = 0;
+  }
 }
 
 u32 div(u32 n, u32 d)  // long division
@@ -60,7 +84,7 @@ printf(int fd, char *fmt, ...)
   char *s;
   int c, i, state;
   uint *ap;
-
+  writebuffer[fd].length = 0;
   state = 0;
   ap = (uint*)(void*)&fmt + 1;
   for(i = 0; fmt[i]; i++){
@@ -100,4 +124,5 @@ printf(int fd, char *fmt, ...)
       state = 0;
     }
   }
+  flushbuffer(fd);
 }
