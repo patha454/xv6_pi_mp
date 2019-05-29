@@ -61,5 +61,5 @@ don't change the user programs):
 cd uprogs
 make 
 
-copy 'initcode' and 'fs.img' to the directory 'source'
+copy 'initcode' and 'fs.img' to the directory main directory (containing 'source', 'include', and 'uprogs'.)
 
