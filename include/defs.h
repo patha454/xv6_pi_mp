@@ -195,6 +195,7 @@ void		timer3init(void);
 void		timer3intr(void);
 unsigned long long getsystemtime(void);
 void		delay(uint);
+int             sys_time(void);
 
 // trap.c
 void            tvinit(void);

@@ -95,3 +95,21 @@ void led_off()
 	setgpiofunc(18, 1); // gpio 18 for Ok Led, set as an output
 	setgpioval(18, 0);
 }
+
+/**
+ * sys_time returns the system clock time to user space,
+ * via a system call.
+ *
+ * sys_time can only return 32 bits on a syscall interface,
+ * so only the lower 32 bits are returned.
+ *
+ * There should be 1,000,000 ticks per second on the system
+ * clock.
+ *
+ * Therefore, the value of sys_time should rollover aproximatly
+ * every 71 mintues. 
+ */
+int sys_time(void)
+{
+  return getsystemtime();
+}
