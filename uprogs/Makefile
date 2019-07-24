@@ -64,6 +64,7 @@ UPROGS=\
         _wc\
         _zombie\
 	_timetest\
+	_benchmark\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
