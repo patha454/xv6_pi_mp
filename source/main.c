@@ -138,6 +138,7 @@ void aux_main(void)
   wait_for_event();
   tvinit();
   cprintf("CPU %d: tvinit Ok.\n", curr_cpu->id);
+  basic_delay(1000000);
   aux_mmu_init();
   //Can secondary cores see the primary core tvint alloc? Move tvinit earlier in main?
   cprintf("CPU %d: aux_mmu_init: Ok.\n", curr_cpu->id);
