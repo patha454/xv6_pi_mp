@@ -8,7 +8,7 @@
 
 #define FIB_N 30
 #define SUM_FILE "benchmark"
-#define SUM_BUF_SIZE 1000000
+#define SUM_BUF_SIZE 10000
 
 void sum() {
   int i = 1;
@@ -16,14 +16,18 @@ void sum() {
   int len;
   int pid;
   char* buf;
-  int fd = open(SUM_FILE, 0);
+  int fd;
+  while ((fd = open(SUM_FILE, 0)) < 0) {
+  }
   buf = malloc(SUM_BUF_SIZE);
   len = read(fd, buf, SUM_BUF_SIZE);
   while ((i + 1) * len < SUM_BUF_SIZE) {
     memmove((void*) (buf + i * len), (void*) buf, len);
     i++;
   }
-  pid = fork();
+  while ((pid = fork()) == -1) {
+    wait();
+  }
   if (!pid) {
     for (i = 0; i < SUM_BUF_SIZE / 2; i++) {
       sum += buf[i];
@@ -43,7 +47,9 @@ int sum_bench(int n) {
   int i;
   int pid;
   for (i = 0; i < n; i++) {
-    pid = fork();
+    while ((pid = fork()) == -1) {
+      wait();
+    }
     if (!pid) {
       sum();
       exit();
@@ -67,7 +73,9 @@ int fib_bench(int n) {
   int pid;
   int start = time();
   for (i = 0; i < n; i++) {
-    pid = fork();
+    while ((pid = fork()) == -1) {
+      wait();
+    }
     if (!pid) {
       fib(FIB_N);
       exit();
@@ -85,7 +93,9 @@ int fork_bench(int n) {
   int pid;
   int start = time();
   for (i = 0 ; i < n; i++) {
-    pid = fork();
+    while ((pid = fork()) == -1) {
+      wait();
+    }
     if (!pid) {
       exit();
     }
