@@ -6,7 +6,7 @@
 #define FIB_BENCH 'i'
 #define SUM_BENCH 's'
 
-#define FIB_N 30
+#define FIB_N 20
 #define SUM_FILE "benchmark"
 #define SUM_BUF_SIZE 10000
 
@@ -20,13 +20,16 @@ void sum() {
   while ((fd = open(SUM_FILE, 0)) < 0) {
   }
   buf = malloc(SUM_BUF_SIZE);
+  if (buf == 0) {
+    printf(1, "Malloc failure\n");
+    exit();
+  }
   len = read(fd, buf, SUM_BUF_SIZE);
   while ((i + 1) * len < SUM_BUF_SIZE) {
     memmove((void*) (buf + i * len), (void*) buf, len);
     i++;
   }
-  while ((pid = fork()) == -1) {
-    wait();
+  while ((pid = fork()) == -1) {   
   }
   if (!pid) {
     for (i = 0; i < SUM_BUF_SIZE / 2; i++) {
@@ -38,6 +41,8 @@ void sum() {
       sum += buf[i];
     }
   }
+  free(buf);
+  close(fd);
   wait();
   return;
 }
@@ -62,7 +67,7 @@ int sum_bench(int n) {
 }
 
 int fib(int n) {
-  if (n == 1 || n == 2) {
+  if (n <= 2) {
     return 1;
   }
   return fib(n - 1) + fib (n - 2);
@@ -70,18 +75,22 @@ int fib(int n) {
 
 int fib_bench(int n) {
   int i;
+  int j;
   int pid;
   int start = time();
+  j = 0;
   for (i = 0; i < n; i++) {
     while ((pid = fork()) == -1) {
       wait();
+      j--;
     }
+    j++;
     if (!pid) {
       fib(FIB_N);
       exit();
     }
   }
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < j; i++) {
     wait();
   }
   int end = time();
@@ -90,17 +99,21 @@ int fib_bench(int n) {
 
 int fork_bench(int n) {
   int i;
+  int j;
   int pid;
   int start = time();
+  j = 0;
   for (i = 0 ; i < n; i++) {
     while ((pid = fork()) == -1) {
       wait();
+      j--;
     }
+    j++;
     if (!pid) {
       exit();
     }
   }
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < j; i++) {
     wait();
   }
   int end = time();
