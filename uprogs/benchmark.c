@@ -53,7 +53,6 @@ int sum_bench(int n) {
   int pid;
   for (i = 0; i < n; i++) {
     while ((pid = fork()) == -1) {
-      wait();
     }
     if (!pid) {
       sum();
@@ -82,15 +81,14 @@ int fib_bench(int n) {
   for (i = 0; i < n; i++) {
     while ((pid = fork()) == -1) {
       wait();
-      j--;
+      j++;
     }
-    j++;
     if (!pid) {
       fib(FIB_N);
       exit();
     }
   }
-  for (i = 0; i < j; i++) {
+  for (i = 0; i < n - j; i++) {
     wait();
   }
   int end = time();
@@ -106,14 +104,13 @@ int fork_bench(int n) {
   for (i = 0 ; i < n; i++) {
     while ((pid = fork()) == -1) {
       wait();
-      j--;
+      j++;
     }
-    j++;
     if (!pid) {
       exit();
     }
   }
-  for (i = 0; i < j; i++) {
+  for (i = 0; i < n - j; i++) {
     wait();
   }
   int end = time();
